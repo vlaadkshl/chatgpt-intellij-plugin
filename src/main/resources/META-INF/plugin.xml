@@ -1,0 +1,13 @@
+<idea-plugin>
+    <id>com.sytoss.plugin-demo</id>
+
+    <name>Demo</name>
+    <vendor />
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow factoryClass="com.sytoss.plugindemo.PluginToolWindowFactory"
+                    id="My Plugin" secondary="true" icon="AllIcons.Toolwindows.NoEvents" anchor="right" />
+    </extensions>
+</idea-plugin>
