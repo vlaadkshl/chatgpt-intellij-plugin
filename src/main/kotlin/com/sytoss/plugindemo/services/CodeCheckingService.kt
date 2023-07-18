@@ -8,7 +8,7 @@ import com.theokanning.openai.service.OpenAiService
 
 object CodeCheckingService {
 
-    private val openAiService = OpenAiService("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")
+    private val openAiService = OpenAiService(this::class.java.getResource("/key")?.readText() ?: "")
 
     private fun createRequestText(selectedFiles: List<ClassFile>): String {
         val requestBuilder = StringBuilder(
