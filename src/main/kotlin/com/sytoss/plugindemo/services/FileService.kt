@@ -1,17 +1,16 @@
 package com.sytoss.plugindemo.services
 
-import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiPackage
+import com.intellij.util.containers.stream
 import com.sytoss.plugindemo.data.ClassFile
-import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 
 object FileService {
-    fun readFileContents(file: VirtualFile): ClassFile {
-        return try {
-            ClassFile(file.nameWithoutExtension, Files.readString(Path.of(file.path)))
-        } catch (e: IOException) {
-            throw RuntimeException(e)
-        }
+    fun readFileContents(psiPackage: PsiPackage): List<ClassFile> {
+        return psiPackage.classes.stream()
+            .map { file -> file.containingFile }
+            .map { file -> ClassFile(file.name, Files.readString(Path.of(file.virtualFile.path))) }
+            .toList()
     }
 }

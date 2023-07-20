@@ -14,7 +14,7 @@ class CodePickerListener(descriptor: FileChooserDescriptor) : TextBrowseFolderLi
         selectedPaths.add(chosenFile)
     }
 
-    fun getFiles(): List<ClassFile> {
-        return selectedPaths.stream().map { e -> FileService.readFileContents(e) }.toList()
-    }
+//    fun getFiles(): List<ClassFile> {
+//        return selectedPaths.stream().map { e -> FileService.readFileContents(e) }.toList()
+//    }
 }
