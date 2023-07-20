@@ -8,13 +8,19 @@ import com.theokanning.openai.service.OpenAiService
 
 object CodeCheckingService {
 
-    private val openAiService = OpenAiService(this::class.java.getResource("/key")?.readText() ?: "")
+    private val openAiService: OpenAiService
+
+    init {
+        val key = javaClass.getResource("/key")?.readText()
+            ?: throw IllegalStateException("The OpenAI API key doesn't exist")
+        openAiService = OpenAiService(key)
+    }
 
     private fun createRequestText(selectedFiles: List<ClassFile>): String {
         val requestBuilder = StringBuilder(
             """
                 These are the code rules:
-                1. BOM can't contain DTOs or another non-BOM elements;
+                1. BOM classes can't contain DTOs, services or another non-BOM elements;
                 2. We work with repositories only in services.
                 Let me know, what are the errors in code snippets below. Group warnings by classes.
             """
