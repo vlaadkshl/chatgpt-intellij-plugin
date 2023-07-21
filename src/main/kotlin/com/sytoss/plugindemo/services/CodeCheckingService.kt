@@ -1,6 +1,6 @@
 package com.sytoss.plugindemo.services
 
-import com.sytoss.plugindemo.data.ClassFile
+import com.sytoss.plugindemo.bom.ClassFile
 import com.theokanning.openai.completion.chat.ChatCompletionRequest
 import com.theokanning.openai.completion.chat.ChatMessage
 import com.theokanning.openai.completion.chat.ChatMessageRole

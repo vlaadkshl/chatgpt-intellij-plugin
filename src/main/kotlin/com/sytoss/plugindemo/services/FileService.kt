@@ -2,7 +2,7 @@ package com.sytoss.plugindemo.services
 
 import com.intellij.psi.PsiPackage
 import com.intellij.util.containers.stream
-import com.sytoss.plugindemo.data.ClassFile
+import com.sytoss.plugindemo.bom.ClassFile
 import java.nio.file.Files
 import java.nio.file.Path
 
