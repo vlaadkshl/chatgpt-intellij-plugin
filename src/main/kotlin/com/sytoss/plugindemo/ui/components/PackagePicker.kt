@@ -1,18 +1,20 @@
 package com.sytoss.plugindemo.ui.components
 
-import com.intellij.ide.util.PackageChooserDialog
+import com.intellij.openapi.module.Module
+import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.psi.PsiDirectory
+import com.intellij.psi.PsiManager
 import com.intellij.util.containers.stream
-import java.awt.event.ActionEvent
 import javax.swing.JButton
 
-class PackagePicker(private val project: Project) {
+class PackagePicker(
+    private val project: Project,
+    var module: Module = ModuleManager.getInstance(project).modules[0]
+) {
 
     data class FolderSearchingElems(var isFolderSearchDone: Boolean = false, var folder: PsiDirectory?)
-
-    private val files: MutableList<VirtualFile> = mutableListOf()
 
     private val pyramidElems: MutableMap<String, FolderSearchingElems> = mutableMapOf(
         "bom" to FolderSearchingElems(false, null),
@@ -21,13 +23,9 @@ class PackagePicker(private val project: Project) {
         "service" to FolderSearchingElems(false, null),
     )
 
-    fun getFilesNames(): List<String> {
-        return files.map { file -> file.name }
-    }
-
     fun fileButton(): JButton {
         val button = JButton("Select Source Package")
-        button.addActionListener { event -> choosePackages(event) }
+        button.addActionListener { event -> choosePackage() }
         return button
     }
 
@@ -40,12 +38,16 @@ class PackagePicker(private val project: Project) {
         }
 
         for (file in directory.files) {
-            files.add(file.virtualFile)
+//            files.add(file.virtualFile)
         }
     }
 
-    private fun getSuitedDirectory(directory: PsiDirectory, name: String, elem: FolderSearchingElems) {
+    private fun getSuitedDirectory(directory: PsiDirectory?, name: String, elem: FolderSearchingElems) {
         if (elem.isFolderSearchDone) {
+            return
+        }
+
+        if (directory == null) {
             return
         }
 
@@ -61,18 +63,23 @@ class PackagePicker(private val project: Project) {
         return
     }
 
-    private fun choosePackages(event: ActionEvent) {
-        val fileChooser = PackageChooserDialog("Select Source Package", project)
-        fileChooser.show()
+    private fun choosePackage() {
+        for ((_, value) in pyramidElems) {
+            value.folder = null
+            value.isFolderSearchDone = false
+        }
 
-        val selectedFolder = fileChooser.selectedPackage.directories[0]
+        val selectedFolder = ModuleRootManager.getInstance(module).sourceRoots.find { root ->
+            root.path.contains("main") && !root.path.contains("resources")
+        }
 
-        for ((name, value) in pyramidElems) {
-            getSuitedDirectory(selectedFolder, name, value)
+        if (selectedFolder != null) {
+            val psiDirectory = PsiManager.getInstance(project).findDirectory(selectedFolder)
+            for ((name, value) in pyramidElems) {
+                getSuitedDirectory(psiDirectory, name, value)
+            }
         }
 
         pyramidElems.forEach { (name, value) -> println("$name: ${value.folder?.virtualFile?.path ?: "not found"}") }
-
-//        (event.source as JButton).text = selectedFolder.name
     }
 }
