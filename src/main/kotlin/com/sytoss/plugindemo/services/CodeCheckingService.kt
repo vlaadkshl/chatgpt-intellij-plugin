@@ -39,6 +39,13 @@ object CodeCheckingService {
             )
         }
 
+        requestBuilder.append(
+            """
+            Show me warnings in JSON format.
+            The fields are "fileName", "warnings" (array with fields "warning" and "lineInCode"; the "lineInCode" shows, what line this warning affects)
+        """
+        )
+
         return requestBuilder.toString()
     }
 
