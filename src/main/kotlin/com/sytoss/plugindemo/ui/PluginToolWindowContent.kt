@@ -33,25 +33,29 @@ class PluginToolWindowContent(project: Project) {
             combo.component.selectedItem = modules[0]
             combo.component.addActionListener { event -> listenComboChanged(event) }
         }
-        row("Find Files") {
-            cell(folderPicker.fileButton())
-        }
         row {
-            button("Show") { _ -> showReport() }
+            button("Errors Analysis") { _ -> errorAnalysis() }
+            button("Pyramid Matching Analysis") { _ -> pyramidAnalysis() }
         }
     }
 
     private fun listenComboChanged(event: ActionEvent) {
         val selectedItem: Module = (event.source as JComboBox<*>).selectedItem as Module
         folderPicker.module = selectedItem
+        folderPicker.getPackages()
     }
 
-    private fun showReport() {
-        Messages.showMessageDialog(
-            null,
-            CodeCheckingService.generateReport(FileService.readFileContents(folderPicker.pyramidElems)),
-            "Review Results",
-            Messages.getInformationIcon()
-        )
+    private fun errorAnalysis() {
+        val fileContent = FileService.readFileContents(folderPicker.pyramidElems)
+        val report = CodeCheckingService.analyseErrors(fileContent)
+
+        Messages.showMessageDialog(null, report, "Error Review Results", Messages.getInformationIcon())
+    }
+
+    private fun pyramidAnalysis() {
+        val fileContent = FileService.readFileContents(folderPicker.pyramidElems)
+        val report = CodeCheckingService.analysePyramid(fileContent)
+
+        Messages.showMessageDialog(null, report, "Pyramid Review Results", Messages.getInformationIcon())
     }
 }
