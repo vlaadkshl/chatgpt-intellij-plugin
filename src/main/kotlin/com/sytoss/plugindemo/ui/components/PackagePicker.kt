@@ -10,25 +10,18 @@ import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiManager
 import com.intellij.util.containers.stream
 import com.sytoss.plugindemo.bom.FolderSearchingElems
-import javax.swing.JButton
 
 class PackagePicker(
     private val project: Project,
     var module: Module = ModuleManager.getInstance(project).modules[0]
 ) {
 
-    private val pyramidElems: MutableMap<String, FolderSearchingElems> = mutableMapOf(
+    val pyramidElems: MutableMap<String, FolderSearchingElems> = mutableMapOf(
         "bom" to FolderSearchingElems(false, null),
         "converter" to FolderSearchingElems(false, null),
         "dto" to FolderSearchingElems(false, null),
         "service" to FolderSearchingElems(false, null),
     )
-
-    fun fileButton(): JButton {
-        val button = JButton("Select Source Package")
-        button.addActionListener { showPackages() }
-        return button
-    }
 
     private fun getAllFilesInDirectory(directory: PsiDirectory, files: MutableList<VirtualFile>) {
         directory.subdirectories.stream().forEach { dir -> println(dir.name) }
@@ -64,7 +57,7 @@ class PackagePicker(
         return
     }
 
-    private fun showPackages() {
+    fun getPackages() {
         clearPyramid()
 
         val sourceDir = getModulesSource()

@@ -8,7 +8,7 @@
     <depends>com.intellij.java</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.sytoss.plugindemo.PluginToolWindowFactory"
+        <toolWindow factoryClass="com.sytoss.plugindemo.ui.PluginToolWindowFactory"
                     id="My Plugin" secondary="true" icon="AllIcons.Toolwindows.NoEvents" anchor="right" />
     </extensions>
 </idea-plugin>

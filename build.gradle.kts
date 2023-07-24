@@ -2,6 +2,7 @@ plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "1.8.21"
     id("org.jetbrains.intellij") version "1.13.3"
+    kotlin("plugin.serialization") version "1.8.21"
 }
 
 group = "com.sytoss"
@@ -13,6 +14,7 @@ repositories {
 
 dependencies {
     implementation("com.theokanning.openai-gpt3-java:service:0.14.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
 }
 
 // Configure Gradle IntelliJ Plugin
