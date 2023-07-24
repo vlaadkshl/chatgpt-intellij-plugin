@@ -17,7 +17,7 @@ class PackagePicker(
     var module: Module = ModuleManager.getInstance(project).modules[0]
 ) {
 
-    private val pyramidElems: MutableMap<String, FolderSearchingElems> = mutableMapOf(
+    val pyramidElems: MutableMap<String, FolderSearchingElems> = mutableMapOf(
         "bom" to FolderSearchingElems(false, null),
         "converter" to FolderSearchingElems(false, null),
         "dto" to FolderSearchingElems(false, null),

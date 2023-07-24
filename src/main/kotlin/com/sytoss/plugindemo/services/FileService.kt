@@ -1,16 +1,26 @@
 package com.sytoss.plugindemo.services
 
-import com.intellij.psi.PsiPackage
-import com.intellij.util.containers.stream
 import com.sytoss.plugindemo.bom.ClassFile
+import com.sytoss.plugindemo.bom.FolderSearchingElems
 import java.nio.file.Files
-import java.nio.file.Path
 
 object FileService {
-    fun readFileContents(psiPackage: PsiPackage): List<ClassFile> {
-        return psiPackage.classes.stream()
-            .map { file -> file.containingFile }
-            .map { file -> ClassFile(file.name, Files.readString(Path.of(file.virtualFile.path))) }
-            .toList()
+    fun readFileContents(pyramidElems: MutableMap<String, FolderSearchingElems>): List<ClassFile> {
+        val fileList = mutableListOf<ClassFile>()
+
+        for ((_, value) in pyramidElems) {
+            if (value.files.isNotEmpty()) {
+                for (file in value.files) {
+                    fileList.add(
+                        ClassFile(
+                            file.nameWithoutExtension,
+                            Files.readString(file.toNioPath())
+                        )
+                    )
+                }
+            }
+        }
+
+        return fileList
     }
 }

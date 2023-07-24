@@ -3,7 +3,10 @@ package com.sytoss.plugindemo.ui
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.Messages
 import com.intellij.ui.dsl.builder.panel
+import com.sytoss.plugindemo.services.CodeCheckingService
+import com.sytoss.plugindemo.services.FileService
 import com.sytoss.plugindemo.ui.components.PackagePicker
 import java.awt.GridLayout
 import java.awt.event.ActionEvent
@@ -44,22 +47,11 @@ class PluginToolWindowContent(project: Project) {
     }
 
     private fun showReport() {
-//        Messages.showMessageDialog(
-//            null, bomPicker.getFilesNames().toString(), "", Messages.getInformationIcon()
-//        )
-
-//        Messages.showMessageDialog(
-//            null,
-//            FileService.readFileContents(fileChooser.selectedPackage).toString(),
-//            "",
-//            Messages.getInformationIcon()
-//        )
-
-//        Messages.showMessageDialog(
-//            null,
-//            CodeCheckingService.generateReport(FileService.readFileContents(fileChooser.selectedPackage)),
-//            "Review Results",
-//            Messages.getInformationIcon()
-//        )
+        Messages.showMessageDialog(
+            null,
+            CodeCheckingService.generateReport(FileService.readFileContents(folderPicker.pyramidElems)),
+            "Review Results",
+            Messages.getInformationIcon()
+        )
     }
 }
