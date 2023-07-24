@@ -1,0 +1,54 @@
+{
+  "converter": [
+    {
+      "name": "BookConverter",
+      "add": [
+        "fromDto()",
+        "toDto()"
+      ]
+    },
+    {
+      "name": "AuthorConverter",
+      "add": [
+        "fromDto()"
+      ]
+    },
+    {
+      "name": "GenreConverter",
+      "add": [
+        "fromDto()"
+      ]
+    }
+  ],
+  "bom": [],
+  "dto": [],
+  "interface": [
+    {
+      "name": "BookController",
+      "add": [
+        "getBookById(Long bookId)"
+      ]
+    }
+  ],
+  "service": [
+    {
+      "name": "BookService",
+      "add": [
+        "getBookById(Long bookId)"
+      ]
+    },
+    {
+      "name": "AuthorService",
+      "add": [
+        "getAuthorById(Long authorId)"
+      ]
+    },
+    {
+      "name": "GenreService",
+      "add": [
+        "getGenreById(Long genreId)"
+      ]
+    }
+  ],
+  "connector": []
+}
