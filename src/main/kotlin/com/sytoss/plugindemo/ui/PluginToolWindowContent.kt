@@ -6,7 +6,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.dsl.builder.panel
 import com.sytoss.plugindemo.services.CodeCheckingService
-import com.sytoss.plugindemo.services.FileService
+import com.sytoss.plugindemo.converters.FileConverter
 import com.sytoss.plugindemo.ui.components.PackagePicker
 import java.awt.GridLayout
 import java.awt.event.ActionEvent
@@ -46,14 +46,14 @@ class PluginToolWindowContent(project: Project) {
     }
 
     private fun errorAnalysis() {
-        val fileContent = FileService.readFileContents(folderPicker.pyramidElems)
+        val fileContent = FileConverter.filesToClassFile(folderPicker.pyramidElems)
         val report = CodeCheckingService.analyseErrors(fileContent)
 
         Messages.showMessageDialog(null, report, "Error Review Results", Messages.getInformationIcon())
     }
 
     private fun pyramidAnalysis() {
-        val fileContent = FileService.readFileContents(folderPicker.pyramidElems)
+        val fileContent = FileConverter.filesToClassFile(folderPicker.pyramidElems)
         val report = CodeCheckingService.analysePyramid(fileContent)
 
         Messages.showMessageDialog(null, report, "Pyramid Review Results", Messages.getInformationIcon())

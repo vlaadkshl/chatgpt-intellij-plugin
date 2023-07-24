@@ -1,11 +1,12 @@
-package com.sytoss.plugindemo.services
+package com.sytoss.plugindemo.converters
 
 import com.sytoss.plugindemo.bom.ClassFile
 import com.sytoss.plugindemo.bom.FolderSearchingElems
 import java.nio.file.Files
 
-object FileService {
-    fun readFileContents(pyramidElems: MutableMap<String, FolderSearchingElems>): List<ClassFile> {
+object FileConverter {
+
+    fun filesToClassFile(pyramidElems: MutableMap<String, FolderSearchingElems>): List<ClassFile> {
         val fileList = mutableListOf<ClassFile>()
 
         for ((_, value) in pyramidElems) {
