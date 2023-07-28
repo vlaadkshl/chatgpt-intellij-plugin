@@ -54,12 +54,8 @@ object CodeCheckingService {
         return requestBuilder.toString()
     }
 
-    private fun createPyramidAnalysisRequest(selectedFiles: List<ClassFile>): String {
-        val requestBuilder = StringBuilder(
-            """
-                test test
-            """
-        )
+    private fun createPyramidAnalysisRequest(): String {
+        val requestBuilder = StringBuilder()
 
         return requestBuilder.toString()
     }
