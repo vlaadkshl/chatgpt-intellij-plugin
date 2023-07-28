@@ -1,21 +1,22 @@
 package com.sytoss.plugindemo.converters
 
 import com.sytoss.plugindemo.bom.ClassFile
-import com.sytoss.plugindemo.bom.FolderSearchingElems
+import com.sytoss.plugindemo.bom.PackageFinderDetails
 import java.nio.file.Files
 
 object FileConverter {
 
-    fun filesToClassFile(pyramidElems: MutableMap<String, FolderSearchingElems>): List<ClassFile> {
+    fun filesToClassFiles(pyramidElems: MutableMap<String, PackageFinderDetails>): List<ClassFile> {
         val fileList = mutableListOf<ClassFile>()
 
-        for ((_, value) in pyramidElems) {
+        for ((type, value) in pyramidElems) {
             if (value.files.isNotEmpty()) {
                 for (file in value.files) {
                     fileList.add(
                         ClassFile(
                             file.nameWithoutExtension,
-                            Files.readString(file.toNioPath())
+                            Files.readString(file.toNioPath()),
+                            type
                         )
                     )
                 }

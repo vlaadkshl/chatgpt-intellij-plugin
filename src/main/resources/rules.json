@@ -1,0 +1,22 @@
+{
+  "rules": [
+    {
+      "name": "BOM can have only BOMs",
+      "rule": "BOM classes can't contain DTOs, services or another non-BOM elements",
+      "fileTypes": [
+        "bom"
+      ]
+    },
+    {
+      "name": "Repositories are only in Services",
+      "rule": "We work with repositories only in services",
+      "fileTypes": [
+        "bom",
+        "dto",
+        "connector",
+        "converter",
+        "interface"
+      ]
+    }
+  ]
+}

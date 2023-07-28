@@ -1,4 +1,4 @@
-package com.sytoss.plugindemo.ui.components
+package com.sytoss.plugindemo.services
 
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
@@ -9,19 +9,23 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiManager
 import com.intellij.util.containers.stream
-import com.sytoss.plugindemo.bom.FolderSearchingElems
+import com.sytoss.plugindemo.bom.FileTypes
+import com.sytoss.plugindemo.bom.PackageFinderDetails
 
-class PackagePicker(
+class PackageFinderService(
     private val project: Project,
     var module: Module = ModuleManager.getInstance(project).modules[0]
 ) {
 
-    val pyramidElems: MutableMap<String, FolderSearchingElems> = mutableMapOf(
-        "bom" to FolderSearchingElems(false, null),
-        "converter" to FolderSearchingElems(false, null),
-        "dto" to FolderSearchingElems(false, null),
-        "service" to FolderSearchingElems(false, null),
-    )
+    private var fileTypes = JsonService.fromJsonResourceFile<FileTypes>("/fileTypes.json").fileTypes
+
+    val pyramidElems: MutableMap<String, PackageFinderDetails> = mutableMapOf()
+
+    init {
+        for (type in fileTypes) {
+            pyramidElems[type] = PackageFinderDetails(false, null)
+        }
+    }
 
     private fun getAllFilesInDirectory(directory: PsiDirectory, files: MutableList<VirtualFile>) {
         directory.subdirectories.stream().forEach { dir -> println(dir.name) }
@@ -36,7 +40,7 @@ class PackagePicker(
         }
     }
 
-    private fun getSuitedDirectory(directory: PsiDirectory?, name: String, elem: FolderSearchingElems) {
+    private fun getSuitedDirectory(directory: PsiDirectory?, name: String, elem: PackageFinderDetails) {
         if (elem.isFolderSearchDone) {
             return
         }
@@ -45,7 +49,7 @@ class PackagePicker(
             return
         }
 
-        if (directory.name.lowercase().contains(name.lowercase())) {
+        if (directory.name.contains(name, ignoreCase = true)) {
             elem.isFolderSearchDone = true
             elem.folder = directory
         } else {
@@ -57,7 +61,7 @@ class PackagePicker(
         return
     }
 
-    fun getPackages() {
+    fun findPackages() {
         clearPyramid()
 
         val sourceDir = getModulesSource()
@@ -65,8 +69,6 @@ class PackagePicker(
         if (sourceDir != null) {
             getDirectoriesForPyramid(sourceDir)
         }
-
-        printPyramidDirectories()
 
         setFilesToPyramid()
         messageFileNames()
@@ -91,10 +93,6 @@ class PackagePicker(
                 getAllFilesInDirectory(value.folder!!, value.files)
             }
         }
-    }
-
-    private fun printPyramidDirectories() {
-        pyramidElems.forEach { (name, value) -> println("$name: ${value.folder?.virtualFile?.path ?: "not found"}") }
     }
 
     private fun getDirectoriesForPyramid(selectedFolder: VirtualFile) {

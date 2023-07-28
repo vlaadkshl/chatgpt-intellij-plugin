@@ -2,13 +2,19 @@
     <id>com.sytoss.plugin-demo</id>
 
     <name>Demo</name>
-    <vendor />
+    <vendor/>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.java</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow factoryClass="com.sytoss.plugindemo.ui.PluginToolWindowFactory"
-                    id="My Plugin" secondary="true" icon="AllIcons.Toolwindows.NoEvents" anchor="right" />
+                    id="My Plugin"
+                    secondary="true"
+                    icon="AllIcons.Toolwindows.NoEvents"
+                    anchor="bottom"
+        />
+        <!--        <localInspection implementationClass="com.sytoss.plugindemo.services.ProblemChecker"-->
+        <!--                         displayName="My inspection" enabledByDefault="true"/>-->
     </extensions>
 </idea-plugin>

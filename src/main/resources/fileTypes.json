@@ -1,0 +1,10 @@
+{
+  "fileTypes": [
+    "bom",
+    "dto",
+    "connector",
+    "service",
+    "converter",
+    "interface"
+  ]
+}
