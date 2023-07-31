@@ -1,7 +1,6 @@
 package com.sytoss.plugindemo.services
 
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.Messages
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
 import com.sytoss.plugindemo.bom.ClassFile
@@ -10,13 +9,11 @@ import com.sytoss.plugindemo.bom.warnings.ClassGroup
 import com.sytoss.plugindemo.bom.warnings.WarningsResult
 import com.theokanning.openai.client.OpenAiApi
 import com.theokanning.openai.completion.chat.ChatCompletionRequest
-import com.theokanning.openai.completion.chat.ChatCompletionResult
 import com.theokanning.openai.completion.chat.ChatMessage
 import com.theokanning.openai.completion.chat.ChatMessageRole
 import com.theokanning.openai.service.OpenAiService
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import java.net.SocketTimeoutException
 import java.time.Duration
 
 object CodeCheckingService {
@@ -167,24 +164,7 @@ If there is no errors for class, don't put it in result""".trimIndent()
     }
 
     private fun sendRequestToChat(request: ChatCompletionRequest?): String {
-        var response: ChatCompletionResult? = null
-        try {
-            response = openAiApi.createChatCompletion(request).blockingGet()
-        } catch (_: SocketTimeoutException) {
-            Messages.showInfoMessage(
-                "Oops! We have a timeout error. Trying to send request again",
-                "RequestTimeout Error"
-            )
-
-            try {
-                response = openAiApi.createChatCompletion(request).blockingGet()
-            } catch (_: SocketTimeoutException) {
-                Messages.showErrorDialog(
-                    "Sorry, but we can't get a response due to timeout exception. Try again later.",
-                    "RequestTimeout Error"
-                )
-            }
-        }
+        val response = openAiApi.createChatCompletion(request).blockingGet()
 
         return response?.choices?.get(0)?.message?.content ?: throw RuntimeException("Can't get response")
     }

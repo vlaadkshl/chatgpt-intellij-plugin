@@ -14,6 +14,7 @@ import com.sytoss.plugindemo.services.CodeCheckingService
 import com.sytoss.plugindemo.services.PackageFinderService
 import com.sytoss.plugindemo.services.PyramidService
 import com.sytoss.plugindemo.ui.components.RulesTable
+import io.ktor.network.sockets.*
 import java.awt.GridLayout
 import java.awt.event.ActionEvent
 import javax.swing.JComboBox
@@ -96,7 +97,11 @@ class PluginToolWindowContent(private val project: Project) {
                     else "Code doesn't have errors."
             } catch (e: Exception) {
                 errorsText.icon = AllIcons.General.BalloonError
-                errorsText.text = """Error: ${e.message}""".trimMargin()
+                if (e is SocketTimeoutException) {
+                    errorsText.text = "Oops... We have a timeout error.\nPlease, try again!"
+                } else {
+                    errorsText.text = """Error: ${e.message}""".trimMargin()
+                }
             }
         }
     }
