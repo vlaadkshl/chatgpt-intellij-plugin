@@ -68,6 +68,10 @@ ${file.content}
 
         selectedFiles.removeIf { file -> file.rules.isEmpty() }
 
+        if (selectedFiles.isEmpty()) {
+            return WarningsResult(mutableListOf())
+        }
+
         val systemMessage = """
 You are a helpful assistant.
 You search for code errors according to the rules in prompt.
