@@ -81,7 +81,6 @@ Show errors in JSON format like this:
         "warnings": [{
             "warning": "{Place Warning here}",
             "lineInCode": "{place line with error here}"
-            "lineNumber": {number_of_line_with_error}
         }]
     ]
 }
