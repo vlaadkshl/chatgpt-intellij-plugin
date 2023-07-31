@@ -5,5 +5,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class WarningsResult(
 
-    var result: List<ClassGroup>
+    var result: MutableList<ClassGroup>
 )

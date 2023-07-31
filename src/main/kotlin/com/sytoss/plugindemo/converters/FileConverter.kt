@@ -6,7 +6,7 @@ import java.nio.file.Files
 
 object FileConverter {
 
-    fun filesToClassFiles(pyramidElems: MutableMap<String, PackageFinderDetails>): List<ClassFile> {
+    fun filesToClassFiles(pyramidElems: MutableMap<String, PackageFinderDetails>): MutableList<ClassFile> {
         val fileList = mutableListOf<ClassFile>()
 
         for ((type, value) in pyramidElems) {

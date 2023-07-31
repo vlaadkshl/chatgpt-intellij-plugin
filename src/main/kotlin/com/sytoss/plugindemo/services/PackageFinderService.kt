@@ -27,6 +27,19 @@ class PackageFinderService(
         }
     }
 
+    fun isPyramidEmpty(): Boolean {
+        var isEmpty = true
+
+        for ((_, value) in pyramidElems) {
+            if (value.files.isNotEmpty()) {
+                isEmpty = false
+                break
+            }
+        }
+
+        return isEmpty
+    }
+
     private fun getAllFilesInDirectory(directory: PsiDirectory, files: MutableList<VirtualFile>) {
         directory.subdirectories.stream().forEach { dir -> println(dir.name) }
         directory.files.stream().forEach { file -> println(file.name) }

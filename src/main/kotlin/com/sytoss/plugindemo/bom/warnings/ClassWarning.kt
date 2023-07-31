@@ -6,5 +6,5 @@ import kotlinx.serialization.Serializable
 data class ClassWarning(
     val warning: String,
     val lineInCode: String,
-    val lineNumber: Int
+    val lineNumber: Int? = null
 )

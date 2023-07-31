@@ -4,8 +4,6 @@ import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
-import com.intellij.psi.JavaPsiFacade
-import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.dsl.builder.panel
@@ -74,38 +72,35 @@ class PluginToolWindowContent(private val project: Project) {
     }
 
     private fun analyseErrors() {
-        val fileContent = FileConverter.filesToClassFiles(packageFinder.pyramidElems)
-
-        if (fileContent.isEmpty()) {
+        if (packageFinder.isPyramidEmpty()) {
             Messages.showErrorDialog("First, select the module", "Module Error")
             return
         }
 
-        errorsText.icon = AnimatedIcon.Default()
-        errorsText.text = "Loading..."
-        errorsText.updateUI()
-
         thread {
-            val report = CodeCheckingService.analyseErrors(
-                fileContent,
-                table.getCheckedRules()
-            ).result
+            var report = mutableListOf<ClassGroup>()
+            try {
+                val fileContent = FileConverter.filesToClassFiles(packageFinder.pyramidElems)
 
-            errorsText.icon = null
-            errorsText.text =
-                if (report.isNotEmpty()) CodeCheckingService.buildReportLabelText(report)
-                else "Code doesn't have errors."
+                errorsText.icon = AnimatedIcon.Default()
+                errorsText.text = "Loading..."
+                errorsText.updateUI()
+
+                report = CodeCheckingService.analyseErrors(
+                    fileContent,
+                    table.getCheckedRules()
+                ).result
+
+            } catch (_: Exception) {
+                Messages.showErrorDialog("Some error happened.", "Analyze Error")
+            } finally {
+                errorsText.icon = null
+                errorsText.text =
+                    if (report.isNotEmpty()) CodeCheckingService.buildReportLabelText(report, project)
+                    else "Code doesn't have errors."
+            }
+
         }
-    }
-
-    private fun getClassPath(warningClass: ClassGroup): String? {
-        val (qualifiedName) = warningClass
-        val psiClass = JavaPsiFacade.getInstance(project).findClass(
-            qualifiedName,
-            GlobalSearchScope.projectScope(project)
-        )
-
-        return if (psiClass != null) "file:///${psiClass.containingFile?.virtualFile?.path}:10:1" else null
     }
 
     private fun analysePyramid() {

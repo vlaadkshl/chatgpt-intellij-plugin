@@ -9,7 +9,7 @@
     },
     {
       "name": "Repositories are only in Services",
-      "rule": "We can't use repository in this class",
+      "rule": "Class can't have fields with Repository type.",
       "fileTypes": [
         "bom",
         "dto",
