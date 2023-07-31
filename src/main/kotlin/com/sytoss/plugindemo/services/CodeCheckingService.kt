@@ -90,10 +90,6 @@ If there is no errors for class, don't put it in result""".trimIndent()
         val messages = mutableListOf(
             ChatMessage(
                 ChatMessageRole.SYSTEM.value(), systemMessage
-            ),
-            ChatMessage(
-                ChatMessageRole.SYSTEM.value(),
-                "Analyse only content of classes. Don't watch on \"package\" and \"import\" statements."
             )
         )
         messages.addAll(createErrorAnalysisRequest(selectedFiles))
