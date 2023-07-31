@@ -124,7 +124,9 @@ If there is no errors for class, don't put it in result""".trimIndent()
 
             reportBuilder.append(
                 """
-<p><a href="$path"><b>${classGroup.className}</b></a></p>
+<p>
+<a href="$path"><b>${classGroup.className}</b></a>
+</p>
             """.trimIndent()
             )
 
@@ -132,7 +134,8 @@ If there is no errors for class, don't put it in result""".trimIndent()
                 reportBuilder.append(
                     """
 <p>
-    Warning: ${warning.warning}
+    Warning: ${warning.warning}<br>
+    Line: ${warning.lineInCode}
 </p>
                 """.trimIndent()
                 )
