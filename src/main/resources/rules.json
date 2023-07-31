@@ -9,7 +9,7 @@
     },
     {
       "name": "Repositories are only in Services",
-      "rule": "Class can't have fields with Repository type.",
+      "rule": "Field types with \"Repository\" suffix are not permitted. Example: AppleRepository or JSONRepository have suffix \"Repository\", so they cannot be used in class.",
       "fileTypes": [
         "bom",
         "dto",
