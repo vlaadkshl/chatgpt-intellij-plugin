@@ -2,7 +2,7 @@
   "rules": [
     {
       "name": "BOM can have only BOMs",
-      "rule": "There can be only BOM elements (not DTO, connectors, converters, interfaces and services)",
+      "rule": "There can't be fields with suffixes like: Dto, Connector, Converter, Controller and Service)",
       "fileTypes": [
         "bom"
       ]
