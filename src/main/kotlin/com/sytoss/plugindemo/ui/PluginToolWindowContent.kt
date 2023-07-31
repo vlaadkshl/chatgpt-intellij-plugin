@@ -1,5 +1,6 @@
 package com.sytoss.plugindemo.ui
 
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
@@ -8,7 +9,6 @@ import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.dsl.builder.panel
 import com.sytoss.plugindemo.bom.pyramid.Pyramid
-import com.sytoss.plugindemo.bom.warnings.ClassGroup
 import com.sytoss.plugindemo.converters.FileConverter
 import com.sytoss.plugindemo.services.CodeCheckingService
 import com.sytoss.plugindemo.services.PackageFinderService
@@ -78,7 +78,6 @@ class PluginToolWindowContent(private val project: Project) {
         }
 
         thread {
-            var report = mutableListOf<ClassGroup>()
             try {
                 val fileContent = FileConverter.filesToClassFiles(packageFinder.pyramidElems)
 
@@ -86,20 +85,19 @@ class PluginToolWindowContent(private val project: Project) {
                 errorsText.text = "Loading..."
                 errorsText.updateUI()
 
-                report = CodeCheckingService.analyseErrors(
+                val report = CodeCheckingService.analyseErrors(
                     fileContent,
                     table.getCheckedRules()
                 ).result
 
-            } catch (_: Exception) {
-                Messages.showErrorDialog("Some error happened.", "Analyze Error")
-            } finally {
                 errorsText.icon = null
                 errorsText.text =
                     if (report.isNotEmpty()) CodeCheckingService.buildReportLabelText(report, project)
                     else "Code doesn't have errors."
+            } catch (e: Exception) {
+                errorsText.icon = AllIcons.General.BalloonError
+                errorsText.text = """Error: ${e.message}""".trimMargin()
             }
-
         }
     }
 
