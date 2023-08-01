@@ -8,7 +8,6 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiManager
-import com.intellij.util.containers.stream
 import com.sytoss.plugindemo.bom.FileTypes
 import com.sytoss.plugindemo.bom.PackageFinderDetails
 
@@ -17,13 +16,20 @@ class PackageFinderService(
     var module: Module = ModuleManager.getInstance(project).modules[0]
 ) {
 
+    enum class ModuleChooseType {
+        ALL_MODULES,
+        ONE_MODULE
+    }
+
+    var moduleChooseType = ModuleChooseType.ALL_MODULES
+
     private var fileTypes = JsonService.fromJsonResourceFile<FileTypes>("/fileTypes.json").fileTypes
 
     val pyramidElems: MutableMap<String, PackageFinderDetails> = mutableMapOf()
 
     init {
         for (type in fileTypes) {
-            pyramidElems[type] = PackageFinderDetails(false, null)
+            pyramidElems[type] = PackageFinderDetails(false)
         }
     }
 
@@ -41,9 +47,6 @@ class PackageFinderService(
     }
 
     private fun getAllFilesInDirectory(directory: PsiDirectory, files: MutableList<VirtualFile>) {
-        directory.subdirectories.stream().forEach { dir -> println(dir.name) }
-        directory.files.stream().forEach { file -> println(file.name) }
-
         for (subdirectory in directory.subdirectories) {
             getAllFilesInDirectory(subdirectory, files)
         }
@@ -54,17 +57,13 @@ class PackageFinderService(
     }
 
     private fun getSuitedDirectory(directory: PsiDirectory?, name: String, elem: PackageFinderDetails) {
-        if (elem.isFolderSearchDone) {
-            return
-        }
-
         if (directory == null) {
             return
         }
 
         if (directory.name.contains(name, ignoreCase = true)) {
             elem.isFolderSearchDone = true
-            elem.folder = directory
+            elem.folders.add(directory)
         } else {
             for (subdirectory in directory.subdirectories) {
                 getSuitedDirectory(subdirectory, name, elem)
@@ -77,10 +76,21 @@ class PackageFinderService(
     fun findPackages() {
         clearPyramid()
 
-        val sourceDir = getModulesSource()
+        if (moduleChooseType == ModuleChooseType.ONE_MODULE) {
+            val sourceDir = getModulesSource()
 
-        if (sourceDir != null) {
-            getDirectoriesForPyramid(sourceDir)
+            if (sourceDir != null) {
+                getDirectoriesForPyramid(sourceDir)
+            }
+        } else if (moduleChooseType == ModuleChooseType.ALL_MODULES) {
+            val modules = ModuleManager.getInstance(project).modules.asList()
+            for (module in modules) {
+                val sourceDir = getModulesSource(module)
+
+                if (sourceDir != null) {
+                    getDirectoriesForPyramid(sourceDir)
+                }
+            }
         }
 
         setFilesToPyramid()
@@ -91,7 +101,7 @@ class PackageFinderService(
         val msgBuilder = StringBuilder()
 
         for ((name, value) in pyramidElems) {
-            if (value.folder != null) {
+            if (value.folders.isNotEmpty()) {
                 msgBuilder.append("TYPE: ${name.uppercase()}\n")
                 msgBuilder.append(value.files.map { file -> file.name }.toString()).append("\n\n")
             }
@@ -102,8 +112,8 @@ class PackageFinderService(
 
     private fun setFilesToPyramid() {
         for ((_, value) in pyramidElems) {
-            if (value.folder != null) {
-                getAllFilesInDirectory(value.folder!!, value.files)
+            for (folder in value.folders) {
+                getAllFilesInDirectory(folder, value.files)
             }
         }
     }
@@ -122,10 +132,17 @@ class PackageFinderService(
             root.path.contains("main") && !root.path.contains("resources")
         }
 
+    private fun getModulesSource(module: Module) = ModuleRootManager
+        .getInstance(module)
+        .sourceRoots
+        .find { root ->
+            root.path.contains("main") && !root.path.contains("resources")
+        }
+
     private fun clearPyramid() {
         for ((_, value) in pyramidElems) {
-            value.folder = null
             value.isFolderSearchDone = false
+            value.folders.clear()
             value.files.clear()
         }
     }

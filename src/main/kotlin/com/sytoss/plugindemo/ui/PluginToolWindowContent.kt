@@ -17,6 +17,7 @@ import com.sytoss.plugindemo.bom.pyramid.Pyramid
 import com.sytoss.plugindemo.converters.FileConverter
 import com.sytoss.plugindemo.services.CodeCheckingService
 import com.sytoss.plugindemo.services.PackageFinderService
+import com.sytoss.plugindemo.services.PackageFinderService.ModuleChooseType
 import com.sytoss.plugindemo.services.PyramidService
 import com.sytoss.plugindemo.ui.components.RulesTable
 import io.ktor.network.sockets.*
@@ -39,13 +40,6 @@ class PluginToolWindowContent(private val project: Project) {
 
     private var pyramid: Pyramid? = null
 
-    enum class ModuleChooseType {
-        ALL_MODULES,
-        ONE_MODULE
-    }
-
-    private var moduleChooseType = ModuleChooseType.ONE_MODULE
-
     init {
         val splitter = OnePixelSplitter()
 
@@ -54,9 +48,13 @@ class PluginToolWindowContent(private val project: Project) {
                 lateinit var oneModuleRadio: Cell<JBRadioButton>
                 buttonsGroup("Module Mode") {
                     row { radioButton("All modules", value = ModuleChooseType.ALL_MODULES) }
-                    row { oneModuleRadio = radioButton("One module", value = ModuleChooseType.ONE_MODULE) }
+                    row {
+                        oneModuleRadio = radioButton("One module", value = ModuleChooseType.ONE_MODULE)
+                    }
                 }.bind(
-                    MutableProperty({ moduleChooseType }, { value -> moduleChooseType = value }),
+                    MutableProperty(
+                        { packageFinder.moduleChooseType },
+                        { value -> packageFinder.moduleChooseType = value }),
                     ModuleChooseType::class.java
                 )
 
@@ -68,7 +66,6 @@ class PluginToolWindowContent(private val project: Project) {
                         combo.component.addActionListener { event -> selectModule(event) }
 
                         combo.component.selectedItem = modules[0]
-                        packageFinder.findPackages()
                     }
                 }.enabledIf(oneModuleRadio.component.selected)
             }
@@ -94,10 +91,11 @@ class PluginToolWindowContent(private val project: Project) {
     private fun selectModule(event: ActionEvent) {
         val selected: Module = (event.source as JComboBox<*>).selectedItem as Module
         packageFinder.module = selected
-        packageFinder.findPackages()
     }
 
     private fun analyseErrors() {
+        packageFinder.findPackages()
+
         if (packageFinder.isPyramidEmpty()) {
             Messages.showErrorDialog("First, select the module", "Module Error")
             return
