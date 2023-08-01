@@ -7,7 +7,11 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
+import com.intellij.ui.components.JBRadioButton
+import com.intellij.ui.dsl.builder.Cell
+import com.intellij.ui.dsl.builder.MutableProperty
 import com.intellij.ui.dsl.builder.panel
+import com.intellij.ui.layout.selected
 import com.sytoss.plugindemo.bom.pyramid.Pyramid
 import com.sytoss.plugindemo.converters.FileConverter
 import com.sytoss.plugindemo.services.CodeCheckingService
@@ -34,18 +38,39 @@ class PluginToolWindowContent(private val project: Project) {
 
     private var pyramid: Pyramid? = null
 
+    enum class ModuleChooseType {
+        ALL_MODULES,
+        ONE_MODULE
+    }
+
+    private var moduleChooseType = ModuleChooseType.ONE_MODULE
+
     init {
         val splitter = OnePixelSplitter()
 
         splitter.firstComponent = panel {
-            row {
-                val modules = ModuleManager.getInstance(project).modules.asList()
+            group {
+                lateinit var allModulesRadio: Cell<JBRadioButton>
+                lateinit var oneModuleRadio: Cell<JBRadioButton>
+                buttonsGroup("Choose Module Mode") {
+                    row { allModulesRadio = radioButton("All modules", value = ModuleChooseType.ALL_MODULES) }
+                    row { oneModuleRadio = radioButton("One module", value = ModuleChooseType.ONE_MODULE) }
+                }.bind(
+                    MutableProperty({ moduleChooseType }, { value -> moduleChooseType = value }),
+                    ModuleChooseType::class.java
+                )
 
-                val combo = comboBox(modules)
-                combo.component.addActionListener { event -> selectModule(event) }
+                indent {
+                    row {
+                        val modules = ModuleManager.getInstance(project).modules.asList()
 
-                combo.component.selectedItem = modules[0]
-                packageFinder.findPackages()
+                        val combo = comboBox(modules).enabledIf(oneModuleRadio.component.selected)
+                        combo.component.addActionListener { event -> selectModule(event) }
+
+                        combo.component.selectedItem = modules[0]
+                        packageFinder.findPackages()
+                    }
+                }
             }
             row("Code Analysis Feature") {
                 cell(table)
