@@ -5,6 +5,6 @@ import com.intellij.psi.PsiDirectory
 
 data class PackageFinderDetails(
     var isFolderSearchDone: Boolean = false,
-    var folder: PsiDirectory?,
+    var folders: MutableList<PsiDirectory> = mutableListOf(),
     val files: MutableList<VirtualFile> = mutableListOf()
 )

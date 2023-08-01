@@ -4,10 +4,17 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.DialogPanel
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
+import com.intellij.ui.components.JBRadioButton
+import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.dsl.builder.Cell
+import com.intellij.ui.dsl.builder.bind
 import com.intellij.ui.dsl.builder.panel
+import com.intellij.ui.layout.selected
+import com.sytoss.plugindemo.bom.ModuleChooseType
 import com.sytoss.plugindemo.bom.pyramid.Pyramid
 import com.sytoss.plugindemo.converters.FileConverter
 import com.sytoss.plugindemo.services.CodeCheckingService
@@ -34,34 +41,44 @@ class PluginToolWindowContent(private val project: Project) {
 
     private var pyramid: Pyramid? = null
 
+    private val panel: DialogPanel = panel {
+        group("Choose Module/Modules") {
+            lateinit var oneModuleRadio: Cell<JBRadioButton>
+            buttonsGroup(title = "Module Mode", indent = false) {
+                row { radioButton("All modules", value = ModuleChooseType.ALL_MODULES) }
+                row { oneModuleRadio = radioButton("One module", value = ModuleChooseType.ONE_MODULE) }
+            }.bind(packageFinder::moduleChooseType) { packageFinder.moduleChooseType = it }
+
+            indent {
+                row("Choose Modules") {
+                    val modules = ModuleManager.getInstance(project).modules.asList()
+
+                    val combo = comboBox(modules)
+                    combo.component.addActionListener { event -> selectModule(event) }
+
+                    combo.component.selectedItem = modules[0]
+                }
+            }.enabledIf(oneModuleRadio.component.selected)
+        }
+        row("Code Analysis Feature") {
+            cell(table)
+            button("Errors Analysis") { analyseErrors() }
+        }
+        row("Pyramid Matching Feature") {
+            button("Select Pyramid JSON") { event -> pyramid = PyramidService.selectPyramid(event, project) }
+            button("Pyramid Matching Analysis") { analysePyramid() }
+        }
+    }
+
     init {
         val splitter = OnePixelSplitter()
 
-        splitter.firstComponent = panel {
-            row {
-                val modules = ModuleManager.getInstance(project).modules.asList()
-
-                val combo = comboBox(modules)
-                combo.component.addActionListener { event -> selectModule(event) }
-
-                combo.component.selectedItem = modules[0]
-                packageFinder.findPackages()
-            }
-            row("Code Analysis Feature") {
-                cell(table)
-                button("Errors Analysis") { analyseErrors() }
-            }
-            row("Pyramid Matching Feature") {
-                button("Select Pyramid JSON") { event -> pyramid = PyramidService.selectPyramid(event, project) }
-                button("Pyramid Matching Analysis") { analysePyramid() }
-            }
-        }
-
-        splitter.secondComponent = panel {
+        splitter.firstComponent = JBScrollPane(panel)
+        splitter.secondComponent = JBScrollPane(panel {
             row {
                 cell(errorsText)
             }
-        }
+        })
 
         contentPanel.add(splitter)
     }
@@ -69,10 +86,13 @@ class PluginToolWindowContent(private val project: Project) {
     private fun selectModule(event: ActionEvent) {
         val selected: Module = (event.source as JComboBox<*>).selectedItem as Module
         packageFinder.module = selected
-        packageFinder.findPackages()
     }
 
     private fun analyseErrors() {
+        panel.apply()
+
+        packageFinder.findPackages()
+
         if (packageFinder.isPyramidEmpty()) {
             Messages.showErrorDialog("First, select the module", "Module Error")
             return
