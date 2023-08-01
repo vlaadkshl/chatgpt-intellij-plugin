@@ -8,7 +8,9 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiManager
+import com.intellij.ui.dsl.builder.Panel
 import com.sytoss.plugindemo.bom.FileTypes
+import com.sytoss.plugindemo.bom.ModuleChooseType
 import com.sytoss.plugindemo.bom.PackageFinderDetails
 
 class PackageFinderService(
@@ -16,12 +18,7 @@ class PackageFinderService(
     var module: Module = ModuleManager.getInstance(project).modules[0]
 ) {
 
-    enum class ModuleChooseType {
-        ALL_MODULES,
-        ONE_MODULE
-    }
-
-    var moduleChooseType = ModuleChooseType.ALL_MODULES
+    var moduleChooseType = ModuleChooseType.ONE_MODULE
 
     private var fileTypes = JsonService.fromJsonResourceFile<FileTypes>("/fileTypes.json").fileTypes
 
