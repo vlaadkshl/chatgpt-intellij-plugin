@@ -2,14 +2,14 @@
   "rules": [
     {
       "name": "BOM can have only BOMs",
-      "rule": "BOM classes can't contain DTOs, services or another non-BOM elements",
+      "rule": "There can't be fields with suffixes like: Dto, Connector, Converter, Controller and Service",
       "fileTypes": [
         "bom"
       ]
     },
     {
       "name": "Repositories are only in Services",
-      "rule": "We work with repositories only in services",
+      "rule": "Field types with \"Repository\" suffix are not permitted. Example: AppleRepository or JSONRepository have suffix \"Repository\", so they cannot be used in class.",
       "fileTypes": [
         "bom",
         "dto",

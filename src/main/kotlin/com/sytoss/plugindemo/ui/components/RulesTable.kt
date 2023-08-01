@@ -33,7 +33,7 @@ class RulesTable : JTable(DefaultTableModel(null, arrayOf("Name", ""))) {
                 val col = e.column
 
                 val eventModel = e.source as TableModel
-                val ruleName = eventModel.getValueAt(row, col - 1) as String
+                val ruleName = eventModel.getValueAt(row, 0) as String
                 val checked = eventModel.getValueAt(row, col) as Boolean
 
                 val key = rulesMap.keys.find { key -> key.name == ruleName }!!

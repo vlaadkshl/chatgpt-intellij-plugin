@@ -1,21 +1,20 @@
 package com.sytoss.plugindemo.ui
 
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
-import com.intellij.psi.JavaPsiFacade
-import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.dsl.builder.panel
 import com.sytoss.plugindemo.bom.pyramid.Pyramid
-import com.sytoss.plugindemo.bom.warnings.ClassGroup
 import com.sytoss.plugindemo.converters.FileConverter
 import com.sytoss.plugindemo.services.CodeCheckingService
 import com.sytoss.plugindemo.services.PackageFinderService
 import com.sytoss.plugindemo.services.PyramidService
 import com.sytoss.plugindemo.ui.components.RulesTable
+import io.ktor.network.sockets.*
 import java.awt.GridLayout
 import java.awt.event.ActionEvent
 import javax.swing.JComboBox
@@ -74,38 +73,37 @@ class PluginToolWindowContent(private val project: Project) {
     }
 
     private fun analyseErrors() {
-        val fileContent = FileConverter.filesToClassFiles(packageFinder.pyramidElems)
-
-        if (fileContent.isEmpty()) {
+        if (packageFinder.isPyramidEmpty()) {
             Messages.showErrorDialog("First, select the module", "Module Error")
             return
         }
 
-        errorsText.icon = AnimatedIcon.Default()
-        errorsText.text = "Loading..."
-        errorsText.updateUI()
-
         thread {
-            val report = CodeCheckingService.analyseErrors(
-                fileContent,
-                table.getCheckedRules()
-            ).result
+            try {
+                val fileContent = FileConverter.filesToClassFiles(packageFinder.pyramidElems)
 
-            errorsText.icon = null
-            errorsText.text =
-                if (report.isNotEmpty()) CodeCheckingService.buildReportLabelText(report)
-                else "Code doesn't have errors."
+                errorsText.icon = AnimatedIcon.Default()
+                errorsText.text = "Loading..."
+                errorsText.updateUI()
+
+                val report = CodeCheckingService.analyseErrors(
+                    fileContent,
+                    table.getCheckedRules()
+                ).result
+
+                errorsText.icon = null
+                errorsText.text =
+                    if (report.isNotEmpty()) CodeCheckingService.buildReportLabelText(report, project)
+                    else "Code doesn't have errors."
+            } catch (e: Exception) {
+                errorsText.icon = AllIcons.General.BalloonError
+                if (e is SocketTimeoutException) {
+                    errorsText.text = "Oops... We have a timeout error.\nPlease, try again!"
+                } else {
+                    errorsText.text = """Error: ${e.message}""".trimMargin()
+                }
+            }
         }
-    }
-
-    private fun getClassPath(warningClass: ClassGroup): String? {
-        val (qualifiedName) = warningClass
-        val psiClass = JavaPsiFacade.getInstance(project).findClass(
-            qualifiedName,
-            GlobalSearchScope.projectScope(project)
-        )
-
-        return if (psiClass != null) "file:///${psiClass.containingFile?.virtualFile?.path}:10:1" else null
     }
 
     private fun analysePyramid() {

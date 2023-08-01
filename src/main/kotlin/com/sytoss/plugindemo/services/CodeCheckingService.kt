@@ -1,19 +1,19 @@
 package com.sytoss.plugindemo.services
 
-import com.intellij.openapi.ui.Messages
+import com.intellij.openapi.project.Project
+import com.intellij.psi.JavaPsiFacade
+import com.intellij.psi.search.GlobalSearchScope
 import com.sytoss.plugindemo.bom.ClassFile
 import com.sytoss.plugindemo.bom.rules.Rule
 import com.sytoss.plugindemo.bom.warnings.ClassGroup
 import com.sytoss.plugindemo.bom.warnings.WarningsResult
 import com.theokanning.openai.client.OpenAiApi
 import com.theokanning.openai.completion.chat.ChatCompletionRequest
-import com.theokanning.openai.completion.chat.ChatCompletionResult
 import com.theokanning.openai.completion.chat.ChatMessage
 import com.theokanning.openai.completion.chat.ChatMessageRole
 import com.theokanning.openai.service.OpenAiService
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import java.net.SocketTimeoutException
 import java.time.Duration
 
 object CodeCheckingService {
@@ -23,26 +23,26 @@ object CodeCheckingService {
     init {
         val key = javaClass.getResource("/key")?.readText()
             ?: throw IllegalStateException("The OpenAI API key doesn't exist")
-        openAiApi = OpenAiService.buildApi(key, Duration.ofSeconds(30L))
+        openAiApi = OpenAiService.buildApi(key, Duration.ofSeconds(60L))
     }
 
-    private fun createErrorAnalysisRequest(selectedFiles: List<ClassFile>): String {
-        val requestBuilder = StringBuilder("Here you have classes with theirs names and types for analysis\n")
+    private fun createErrorAnalysisRequest(selectedFiles: List<ClassFile>): List<ChatMessage> {
+        val messages = mutableListOf<ChatMessage>()
 
-        selectedFiles.forEach { (fileName, content, type): ClassFile ->
-            requestBuilder.append(
-                """Name: $fileName
-Type: $type
-Content:
-``` 
-$content
-```
+        selectedFiles.forEach { file -> messages.add(convertFileToRequest(file)) }
 
+        return messages
+    }
+
+    private fun convertFileToRequest(file: ClassFile): ChatMessage {
+        return ChatMessage(
+            ChatMessageRole.USER.value(), """
+Class Name: ${file.fileName}
+Rules: ${file.rules.joinToString(separator = "\n", prefix = "- ")}
+Code for checking:
+${file.content}
 """
-            )
-        }
-
-        return requestBuilder.toString()
+        )
     }
 
     private fun createPyramidAnalysisRequest(): String {
@@ -53,70 +53,76 @@ $content
 
     private fun buildCodeCheckingRequest(messages: List<ChatMessage>): ChatCompletionRequest =
         ChatCompletionRequest.builder()
-            .model("gpt-3.5-turbo")
+            .model("gpt-3.5-turbo-16k")
             .messages(messages)
             .build()
 
-    fun analyseErrors(selectedFiles: List<ClassFile>, rules: List<Rule>): WarningsResult {
-        val formattedRules = RuleService.formatRules(rules)
+    fun analyseErrors(selectedFiles: MutableList<ClassFile>, rules: List<Rule>): WarningsResult {
+        for (file in selectedFiles) {
+            val applicableRules = rules.filter { rule -> rule.fileTypes.contains(file.type) }
+            file.rules = applicableRules.map { rule -> rule.rule }
+        }
 
-        val mainRequest = """
-You are helping the developer with searching for code errors. There are some rules, according to which you need to search errors:
-$formattedRules
+        selectedFiles.removeIf { file -> file.rules.isEmpty() }
 
-If you find some errors, please, group them by classes and show them in JSON format like this: {
-"result": [{
-  "className": "package.ClassName",
-  "warnings": [{
-    "warning": "{Place Warning here}",
-    "lineInCode": "{place line with error here}"
-    "lineNumber": {number_of_line_with_error}
-  }]
-}, {
-  "className": "package.ClassName",
-  "warnings": [{
-    "warning": "{Place Warning here}",
-    "lineInCode": "{place line with error here}"
-    "lineNumber": {number_of_line_with_error}
-  }]
-}]
-}""".trimIndent()
+        if (selectedFiles.isEmpty()) {
+            return WarningsResult(mutableListOf())
+        }
 
-        val request = buildCodeCheckingRequest(
-            listOf(
-                ChatMessage(
-                    ChatMessageRole.SYSTEM.value(), mainRequest
-                ),
-                ChatMessage(
-                    ChatMessageRole.SYSTEM.value(),
-                    "You must apply these rules only to those class types that are specified in the rule description.\n" +
-                            "Class types are specified in their description."
-                ),
-                ChatMessage(
-                    ChatMessageRole.SYSTEM.value(),
-                    "Analyse only content of classes. Don't watch on \"package\" and \"import\" statements."
-                ),
-                ChatMessage(
-                    ChatMessageRole.USER.value(), createErrorAnalysisRequest(selectedFiles)
-                )
+        val systemMessage = """
+You are a helpful assistant.
+You search for code errors according to the rules in prompt.
+Don't analyze imports of classes.
+
+Show errors in JSON format like this:
+{
+    "result": [
+        "className": "package.ClassName",
+        "warnings": [{
+            "warning": "{Place Warning here}",
+            "lineInCode": "{place line with error here}"
+        }]
+    ]
+}
+If there is no errors for class, don't put it in result""".trimIndent()
+
+        val messages = mutableListOf(
+            ChatMessage(
+                ChatMessageRole.SYSTEM.value(), systemMessage
             )
         )
+        messages.addAll(createErrorAnalysisRequest(selectedFiles))
 
+        val request = buildCodeCheckingRequest(messages)
         val response = sendRequestToChat(request)
 
         val decodedResponse = Json.decodeFromString<WarningsResult>(response)
-        decodedResponse.result = decodedResponse.result.filter { group -> group.warnings.isNotEmpty() }
+        decodedResponse.result = decodedResponse.result.filter { group -> group.warnings.isNotEmpty() }.toMutableList()
 
         return decodedResponse
     }
 
-    fun buildReportLabelText(report: List<ClassGroup>): String {
+    private fun getClassPath(warningClass: ClassGroup, project: Project): String? {
+        val (qualifiedName) = warningClass
+        val psiClass = JavaPsiFacade.getInstance(project).findClass(
+            qualifiedName,
+            GlobalSearchScope.projectScope(project)
+        )
+
+        return if (psiClass != null) "file:///${psiClass.containingFile?.virtualFile?.path}" else null
+    }
+
+    fun buildReportLabelText(report: List<ClassGroup>, project: Project): String {
         val reportBuilder = StringBuilder("<html><head></head><body>")
 
         for (classGroup in report) {
+            val path = getClassPath(classGroup, project)
+
             reportBuilder.append(
                 """
-<p><b>${classGroup.className}</b></p>
+<p>
+<a href="$path"><b>${classGroup.className}</b></a>
+</p>
             """.trimIndent()
             )
 
@@ -124,9 +130,8 @@ If you find some errors, please, group them by classes and show them in JSON for
                 reportBuilder.append(
                     """
 <p>
-    Line ${warning.lineInCode}:<br>
-    Line Number: ${warning.lineNumber}<br>
-    Warning: ${warning.warning}
+    Warning: ${warning.warning}<br>
+    Line: ${warning.lineInCode}
 </p>
                 """.trimIndent()
                 )
@@ -154,24 +159,7 @@ If you find some errors, please, group them by classes and show them in JSON for
     }
 
     private fun sendRequestToChat(request: ChatCompletionRequest?): String {
-        var response: ChatCompletionResult? = null
-        try {
-            response = openAiApi.createChatCompletion(request).blockingGet()
-        } catch (_: SocketTimeoutException) {
-            Messages.showInfoMessage(
-                "Oops! We have a timeout error. Trying to send request again",
-                "RequestTimeout Error"
-            )
-
-            try {
-                response = openAiApi.createChatCompletion(request).blockingGet()
-            } catch (_: SocketTimeoutException) {
-                Messages.showErrorDialog(
-                    "Sorry, but we can't get a response due to timeout exception. Try again later.",
-                    "RequestTimeout Error"
-                )
-            }
-        }
+        val response = openAiApi.createChatCompletion(request).blockingGet()
 
         return response?.choices?.get(0)?.message?.content ?: throw RuntimeException("Can't get response")
     }
