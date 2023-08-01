@@ -36,12 +36,13 @@ object CodeCheckingService {
 
     private fun convertFileToRequest(file: ClassFile): ChatMessage {
         return ChatMessage(
-            ChatMessageRole.USER.value(), """
-Class Name: ${file.fileName}
-Rules: ${file.rules.joinToString(separator = "\n", prefix = "- ")}
-Code for checking:
-${file.content}
-"""
+            ChatMessageRole.USER.value(),
+            """
+                |Class Name: ${file.fileName}
+                |Rules: ${file.rules.joinToString(separator = "\n", prefix = "- ")}
+                |Code for checking:
+                |${file.content}
+            """.trimMargin()
         )
     }
 
@@ -70,21 +71,22 @@ ${file.content}
         }
 
         val systemMessage = """
-You are a helpful assistant.
-You search for code errors according to the rules in prompt.
-Don't analyze imports of classes.
-
-Show errors in JSON format like this:
-{
-    "result": [
-        "className": "package.ClassName",
-        "warnings": [{
-            "warning": "{Place Warning here}",
-            "lineInCode": "{place line with error here}"
-        }]
-    ]
-}
-If there is no errors for class, don't put it in result""".trimIndent()
+            |You are a helpful assistant.
+            |You search for code errors according to the rules in prompt.
+            |Don't analyze imports of classes.
+            |
+            |Show errors in JSON format like this:
+            |{
+            |    "result": [
+            |        "className": "package.ClassName",
+            |        "warnings": [{
+            |            "warning": "{Place Warning here}",
+            |            "lineInCode": "{place line with error here}"
+            |        }]
+            |    ]
+            |}
+            |If there is no errors for class, don't put it in result
+        """.trimMargin()
 
         val messages = mutableListOf(
             ChatMessage(
@@ -120,20 +122,20 @@ If there is no errors for class, don't put it in result""".trimIndent()
 
             reportBuilder.append(
                 """
-<p>
-<a href="$path"><b>${classGroup.className}</b></a>
-</p>
-            """.trimIndent()
+                    |<p>
+                        |<a href="$path"><b>${classGroup.className}</b></a>
+                    |</p>
+                """.trimMargin()
             )
 
             for (warning in classGroup.warnings) {
                 reportBuilder.append(
                     """
-<p>
-    Warning: ${warning.warning}<br>
-    Line: ${warning.lineInCode}
-</p>
-                """.trimIndent()
+                        |<p>
+                        |    Warning: ${warning.warning}<br>
+                        |    Line: ${warning.lineInCode}
+                        |</p>
+                    """.trimMargin()
                 )
             }
         }

@@ -16,10 +16,10 @@ object RuleService {
 
             rulesStringBuilder.append(
                 """
-${rule.rule}
-Applicable for these class types: ${rule.fileTypes}
+                    |${rule.rule}
+                    |Applicable for these class types: ${rule.fileTypes}
 
-            """.trimIndent()
+                """.trimMargin()
             )
         }
 
