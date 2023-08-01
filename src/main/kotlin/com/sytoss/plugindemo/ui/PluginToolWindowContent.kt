@@ -8,6 +8,7 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBRadioButton
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.dsl.builder.Cell
 import com.intellij.ui.dsl.builder.MutableProperty
 import com.intellij.ui.dsl.builder.panel
@@ -48,12 +49,11 @@ class PluginToolWindowContent(private val project: Project) {
     init {
         val splitter = OnePixelSplitter()
 
-        splitter.firstComponent = panel {
-            group {
-                lateinit var allModulesRadio: Cell<JBRadioButton>
+        splitter.firstComponent = JBScrollPane(panel {
+            group("Choose Module/Modules") {
                 lateinit var oneModuleRadio: Cell<JBRadioButton>
-                buttonsGroup("Choose Module Mode") {
-                    row { allModulesRadio = radioButton("All modules", value = ModuleChooseType.ALL_MODULES) }
+                buttonsGroup("Module Mode") {
+                    row { radioButton("All modules", value = ModuleChooseType.ALL_MODULES) }
                     row { oneModuleRadio = radioButton("One module", value = ModuleChooseType.ONE_MODULE) }
                 }.bind(
                     MutableProperty({ moduleChooseType }, { value -> moduleChooseType = value }),
@@ -61,16 +61,16 @@ class PluginToolWindowContent(private val project: Project) {
                 )
 
                 indent {
-                    row {
+                    row("Choose Modules") {
                         val modules = ModuleManager.getInstance(project).modules.asList()
 
-                        val combo = comboBox(modules).enabledIf(oneModuleRadio.component.selected)
+                        val combo = comboBox(modules)
                         combo.component.addActionListener { event -> selectModule(event) }
 
                         combo.component.selectedItem = modules[0]
                         packageFinder.findPackages()
                     }
-                }
+                }.enabledIf(oneModuleRadio.component.selected)
             }
             row("Code Analysis Feature") {
                 cell(table)
@@ -80,13 +80,13 @@ class PluginToolWindowContent(private val project: Project) {
                 button("Select Pyramid JSON") { event -> pyramid = PyramidService.selectPyramid(event, project) }
                 button("Pyramid Matching Analysis") { analysePyramid() }
             }
-        }
+        })
 
-        splitter.secondComponent = panel {
+        splitter.secondComponent = JBScrollPane(panel {
             row {
                 cell(errorsText)
             }
-        }
+        })
 
         contentPanel.add(splitter)
     }
