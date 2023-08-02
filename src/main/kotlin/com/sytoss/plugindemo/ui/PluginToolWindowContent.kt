@@ -10,9 +10,7 @@ import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBRadioButton
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.dsl.builder.Cell
-import com.intellij.ui.dsl.builder.bind
-import com.intellij.ui.dsl.builder.panel
+import com.intellij.ui.dsl.builder.*
 import com.intellij.ui.layout.selected
 import com.sytoss.plugindemo.bom.ModuleChooseType
 import com.sytoss.plugindemo.bom.pyramid.Pyramid
@@ -27,6 +25,7 @@ import java.awt.event.ActionEvent
 import javax.swing.JComboBox
 import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.SwingConstants
 import kotlin.concurrent.thread
 
 class PluginToolWindowContent(private val project: Project) {
@@ -37,12 +36,22 @@ class PluginToolWindowContent(private val project: Project) {
 
     private val table = RulesTable()
 
-    private val errorsText = JLabel("Here will be displayed the warnings")
+    private val loadingText = JLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
+
+    private lateinit var loadingLabel: Cell<JLabel>
+
+    private val errorsText = panel {
+        row {
+            loadingLabel = cell(loadingText).visible(false)
+        }
+    }
+
+
 
     private var pyramid: Pyramid? = null
 
     private val panel: DialogPanel = panel {
-        group("Choose Module/Modules") {
+        group {
             lateinit var oneModuleRadio: Cell<JBRadioButton>
             buttonsGroup(title = "Module Mode", indent = false) {
                 row { radioButton("All modules", value = ModuleChooseType.ALL_MODULES) }
@@ -59,11 +68,13 @@ class PluginToolWindowContent(private val project: Project) {
                     combo.component.selectedItem = modules[0]
                 }
             }.enabledIf(oneModuleRadio.component.selected)
-        }
+        }.bottomGap(BottomGap.MEDIUM)
+
         row("Code Analysis Feature") {
             cell(table)
             button("Errors Analysis") { analyseErrors() }
-        }
+        }.bottomGap(BottomGap.MEDIUM)
+
         row("Pyramid Matching Feature") {
             button("Select Pyramid JSON") { event -> pyramid = PyramidService.selectPyramid(event, project) }
             button("Pyramid Matching Analysis") { analysePyramid() }
@@ -74,11 +85,7 @@ class PluginToolWindowContent(private val project: Project) {
         val splitter = OnePixelSplitter()
 
         splitter.firstComponent = JBScrollPane(panel)
-        splitter.secondComponent = JBScrollPane(panel {
-            row {
-                cell(errorsText)
-            }
-        })
+        splitter.secondComponent = JBScrollPane(errorsText)
 
         contentPanel.add(splitter)
     }
@@ -102,25 +109,24 @@ class PluginToolWindowContent(private val project: Project) {
             try {
                 val fileContent = FileConverter.filesToClassFiles(packageFinder.pyramidElems)
 
-                errorsText.icon = AnimatedIcon.Default()
-                errorsText.text = "Loading..."
-                errorsText.updateUI()
+                loadingLabel.visible(true)
 
                 val report = CodeCheckingService.analyseErrors(
                     fileContent,
                     table.getCheckedRules()
                 ).result
 
-                errorsText.icon = null
-                errorsText.text =
-                    if (report.isNotEmpty()) CodeCheckingService.buildReportLabelText(report, project)
-                    else "Code doesn't have errors."
+                loadingLabel.visible(false)
+//                loadingText.icon = null
+//                loadingText.text =
+//                    if (report.isNotEmpty()) CodeCheckingService.buildReportLabelText(report, project)
+//                    else "Code doesn't have errors."
             } catch (e: Exception) {
-                errorsText.icon = AllIcons.General.BalloonError
+                loadingText.icon = AllIcons.General.BalloonError
                 if (e is SocketTimeoutException) {
-                    errorsText.text = "Oops... We have a timeout error.\nPlease, try again!"
+                    loadingText.text = "Oops... We have a timeout error.\nPlease, try again!"
                 } else {
-                    errorsText.text = """Error: ${e.message}""".trimMargin()
+                    loadingText.text = """Error: ${e.message}""".trimMargin()
                 }
             }
         }
