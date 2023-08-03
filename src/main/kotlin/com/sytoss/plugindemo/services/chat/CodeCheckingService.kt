@@ -1,4 +1,4 @@
-package com.sytoss.plugindemo.services
+package com.sytoss.plugindemo.services.chat
 
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
@@ -12,27 +12,15 @@ import com.sytoss.plugindemo.bom.ClassFile
 import com.sytoss.plugindemo.bom.rules.Rule
 import com.sytoss.plugindemo.bom.warnings.ClassGroup
 import com.sytoss.plugindemo.bom.warnings.WarningsResult
-import com.theokanning.openai.client.OpenAiApi
-import com.theokanning.openai.completion.chat.ChatCompletionRequest
 import com.theokanning.openai.completion.chat.ChatMessage
 import com.theokanning.openai.completion.chat.ChatMessageRole
-import com.theokanning.openai.service.OpenAiService
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
-import java.time.Duration
 import javax.swing.JPanel
 
-object CodeCheckingService {
-
-    private val openAiApi: OpenAiApi
-
-    init {
-        val key = javaClass.getResource("/key")?.readText()
-            ?: throw IllegalStateException("The OpenAI API key doesn't exist")
-        openAiApi = OpenAiService.buildApi(key, Duration.ofSeconds(60L))
-    }
+object CodeCheckingService : ChatAbstractService() {
 
     private fun createErrorAnalysisRequest(selectedFiles: List<ClassFile>): List<ChatMessage> {
         val messages = mutableListOf<ChatMessage>()
@@ -53,18 +41,6 @@ object CodeCheckingService {
             """.trimMargin()
         )
     }
-
-    private fun createPyramidAnalysisRequest(): String {
-        val requestBuilder = StringBuilder()
-
-        return requestBuilder.toString()
-    }
-
-    private fun buildCodeCheckingRequest(messages: List<ChatMessage>): ChatCompletionRequest =
-        ChatCompletionRequest.builder()
-            .model("gpt-3.5-turbo-16k")
-            .messages(messages)
-            .build()
 
     fun analyseErrors(selectedFiles: MutableList<ClassFile>, rules: List<Rule>): WarningsResult {
         for (file in selectedFiles) {
@@ -136,7 +112,7 @@ object CodeCheckingService {
             for (classGroup in report) {
                 val classPanel = JPanel(GridBagLayout())
 
-                val file: VirtualFile? = getClassVirtualFile(classGroup, project)
+                val file = getClassVirtualFile(classGroup, project)
 
                 if (file != null) {
                     classPanel.add(ActionLink(classGroup.className) {
@@ -163,28 +139,6 @@ object CodeCheckingService {
             }
         }
 
-
         return panel
-    }
-
-    fun analysePyramid(selectedFiles: List<ClassFile>): String {
-        val request = ChatCompletionRequest.builder()
-            .model("gpt-3.5-turbo")
-            .messages(
-                listOf(
-                    ChatMessage(
-                        ChatMessageRole.USER.value(), createPyramidAnalysisRequest()
-                    )
-                )
-            )
-            .build()
-
-        return sendRequestToChat(request)
-    }
-
-    private fun sendRequestToChat(request: ChatCompletionRequest?): String {
-        val response = openAiApi.createChatCompletion(request).blockingGet()
-
-        return response?.choices?.get(0)?.message?.content ?: throw RuntimeException("Can't get response")
     }
 }

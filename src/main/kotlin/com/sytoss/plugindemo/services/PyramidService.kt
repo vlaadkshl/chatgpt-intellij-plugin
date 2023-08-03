@@ -5,30 +5,30 @@ import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.newvfs.impl.FakeVirtualFile
 import com.sytoss.plugindemo.bom.pyramid.Pyramid
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import java.awt.event.ActionEvent
 import java.nio.file.Files
 import javax.swing.JButton
 
 object PyramidService {
-    fun selectPyramid(event: ActionEvent, project: Project): Pyramid? {
-        var pyramid: Pyramid? = null
+    fun selectPyramid(sourceButton: JButton, project: Project): VirtualFile {
+        var returnFile: VirtualFile = FakeVirtualFile(project.projectFile!!, "")
 
         FileChooser.chooseFile(
             FileChooserDescriptorFactory.createSingleFileDescriptor("json"), project, null
         ) { file ->
             run {
-                (event.source as JButton).text = "Select Pyramid: ${file.name}"
-                pyramid = parsePyramidJson(file)
+                sourceButton.text = "Select Pyramid: ${file.name}"
+                returnFile = file
             }
         }
 
-        return pyramid
+        return returnFile
     }
 
-    private fun parsePyramidJson(file: VirtualFile): Pyramid? {
+    fun parseJson(file: VirtualFile): Pyramid? {
         try {
             return Json.decodeFromString<Pyramid>(Files.readString(file.toNioPath()))
         } catch (e: Exception) {

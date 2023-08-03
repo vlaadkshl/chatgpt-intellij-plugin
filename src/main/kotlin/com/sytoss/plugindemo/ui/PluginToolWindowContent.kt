@@ -18,19 +18,18 @@ import com.intellij.ui.dsl.builder.bind
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.layout.selected
 import com.sytoss.plugindemo.bom.ModuleChooseType
-import com.sytoss.plugindemo.bom.pyramid.Pyramid
 import com.sytoss.plugindemo.converters.FileConverter
-import com.sytoss.plugindemo.services.CodeCheckingService
 import com.sytoss.plugindemo.services.PackageFinderService
 import com.sytoss.plugindemo.services.PyramidService
+import com.sytoss.plugindemo.services.chat.CodeCheckingService
+import com.sytoss.plugindemo.services.chat.PyramidCheckingService
+import com.sytoss.plugindemo.services.chat.PyramidCheckingService.pyramid
+import com.sytoss.plugindemo.services.chat.PyramidCheckingService.pyramidFile
 import com.sytoss.plugindemo.ui.components.RulesTable
 import java.awt.GridLayout
 import java.awt.event.ActionEvent
 import java.net.SocketTimeoutException
-import javax.swing.JComboBox
-import javax.swing.JLabel
-import javax.swing.JPanel
-import javax.swing.SwingConstants
+import javax.swing.*
 import kotlin.concurrent.thread
 
 class PluginToolWindowContent(private val project: Project) {
@@ -47,9 +46,9 @@ class PluginToolWindowContent(private val project: Project) {
 
     private var errorsPanel = JPanel()
 
-    private var pyramid: Pyramid? = null
-
     private val splitter = OnePixelSplitter()
+
+    private lateinit var pyramidAnalysisButton: Cell<*>
 
     private val panel: DialogPanel = panel {
         group {
@@ -79,10 +78,13 @@ class PluginToolWindowContent(private val project: Project) {
         row("Pyramid Matching Feature") {
             button("Select Pyramid JSON") {
                 ApplicationManager.getApplication().invokeLater {
-                    pyramid = PyramidService.selectPyramid(it, project)
+                    pyramidFile = PyramidService.selectPyramid(it.source as JButton, project)
+                    pyramidAnalysisButton.enabled(true)
                 }
             }
-            button("Pyramid Matching Analysis") { analysePyramid() }
+            pyramidAnalysisButton = button("Pyramid Matching Analysis") {
+                analysePyramid()
+            }.enabled(false)
         }
     }
 
@@ -149,9 +151,11 @@ class PluginToolWindowContent(private val project: Project) {
     }
 
     private fun analysePyramid() {
-        if (pyramid != null) {
+        if (pyramidFile != null) {
+            pyramid = PyramidService.parseJson(pyramidFile!!)
             val fileContent = FileConverter.filesToClassFiles(packageFinder.pyramidElems)
-            val report = CodeCheckingService.analysePyramid(fileContent)
+
+            val report = PyramidCheckingService.analysePyramid(fileContent)
 
             Messages.showMessageDialog(null, report, "Pyramid Review Results", Messages.getInformationIcon())
         } else {
