@@ -102,6 +102,7 @@ class PluginToolWindowContent(private val project: Project) {
 
     private fun analyseErrors() {
         panel.apply()
+        errorsPanel.removeAll()
 
         packageFinder.findPackages()
 
@@ -121,11 +122,11 @@ class PluginToolWindowContent(private val project: Project) {
                     table.getCheckedRules()
                 ).result
 
-                loadingPanel.visible(false)
-                if (report.isNotEmpty()) {
-                    SwingUtilities.invokeLater {
-                        CodeCheckingService.buildReportLabelText(report, errorsPanel, project)
-                    }
+                SwingUtilities.invokeLater {
+                    loadingPanel.visible(false)
+
+                    val reportPanel = CodeCheckingService.buildReportLabelText(report, project)
+                    errorsPanel.add(reportPanel)
                 }
             } catch (e: Exception) {
                 loadingText.icon = AllIcons.General.BalloonError

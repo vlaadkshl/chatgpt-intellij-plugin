@@ -7,6 +7,7 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.Label
 import com.sytoss.plugindemo.bom.ClassFile
 import com.sytoss.plugindemo.bom.rules.Rule
 import com.sytoss.plugindemo.bom.warnings.ClassGroup
@@ -18,8 +19,9 @@ import com.theokanning.openai.completion.chat.ChatMessageRole
 import com.theokanning.openai.service.OpenAiService
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import java.awt.GridBagConstraints
+import java.awt.GridBagLayout
 import java.time.Duration
-import javax.swing.JEditorPane
 import javax.swing.JPanel
 
 object CodeCheckingService {
@@ -120,45 +122,49 @@ object CodeCheckingService {
         return psiClass?.containingFile?.virtualFile
     }
 
-    fun buildReportLabelText(report: List<ClassGroup>, errors: JPanel, project: Project) {
-        errors.removeAll()
+    fun buildReportLabelText(report: List<ClassGroup>, project: Project): JPanel {
+        val panel = JPanel(GridBagLayout())
+
+        val constraints = GridBagConstraints()
+        constraints.gridx = 0
+        constraints.gridy = GridBagConstraints.RELATIVE
+        constraints.anchor = GridBagConstraints.WEST
 
         if (report.isEmpty()) {
-            val text = JEditorPane()
-            text.text = "No errors were found."
-            errors.add(text)
+            panel.add(Label("No errors were found."), constraints)
+        } else {
+            for (classGroup in report) {
+                val classPanel = JPanel(GridBagLayout())
 
-            return
-        }
+                val file: VirtualFile? = getClassVirtualFile(classGroup, project)
 
-        for (classGroup in report) {
-            val file: VirtualFile? = getClassVirtualFile(classGroup, project)
+                if (file != null) {
+                    classPanel.add(ActionLink(classGroup.className) {
+                        FileEditorManager.getInstance(project).openFile(file, true)
+                    }, constraints)
+                } else {
+                    classPanel.add(JBLabel("${classGroup.className} (NO LINK)"), constraints)
+                }
 
-            if (file != null) {
-                errors.add(ActionLink(classGroup.className) {
-                    FileEditorManager.getInstance(project).openFile(file, true)
-                })
-            } else {
-                errors.add(JBLabel("${classGroup.className} (NO LINK)"))
-            }
+                for (warning in classGroup.warnings) {
+                    val warningPanel = JPanel()
+                    warningPanel.add(Label("Warning: ", null, null, true))
+                    warningPanel.add(Label(warning.warning))
 
-            for (warning in classGroup.warnings) {
-                errors.add(
-                    JBLabel(
-                        """
-                            |<b>Warning: </b><span>${warning.warning}</span>
-                        """.trimMargin()
-                    )
-                )
-                errors.add(
-                    JBLabel(
-                        """
-                            |<b>Line: </b><span>${warning.lineInCode}</span>
-                        """.trimMargin()
-                    )
-                )
+                    val linePanel = JPanel()
+                    linePanel.add(Label("Line: ", null, null, true))
+                    linePanel.add(Label(warning.lineInCode))
+
+                    classPanel.add(warningPanel, constraints)
+                    classPanel.add(linePanel, constraints)
+                }
+
+                panel.add(classPanel, constraints)
             }
         }
+
+
+        return panel
     }
 
     fun analysePyramid(selectedFiles: List<ClassFile>): String {
