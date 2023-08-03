@@ -1,12 +1,13 @@
 package com.sytoss.plugindemo.services.chat
 
+import com.sytoss.plugindemo.bom.ClassFile
 import com.theokanning.openai.client.OpenAiApi
 import com.theokanning.openai.completion.chat.ChatCompletionRequest
 import com.theokanning.openai.completion.chat.ChatMessage
 import com.theokanning.openai.service.OpenAiService
 import java.time.Duration
 
-abstract class ChatAbstractService {
+abstract class ChatAnalysisAbstractService {
 
     private val openAiApi: OpenAiApi
 
@@ -16,7 +17,7 @@ abstract class ChatAbstractService {
         openAiApi = OpenAiService.buildApi(key, Duration.ofSeconds(60L))
     }
 
-    protected fun buildCodeCheckingRequest(messages: List<ChatMessage>): ChatCompletionRequest =
+    protected fun buildRequest(messages: List<ChatMessage>): ChatCompletionRequest =
         ChatCompletionRequest.builder()
             .model("gpt-3.5-turbo-16k")
             .messages(messages)
@@ -24,7 +25,8 @@ abstract class ChatAbstractService {
 
     protected fun sendRequestToChat(request: ChatCompletionRequest?): String {
         val response = openAiApi.createChatCompletion(request).blockingGet()
-
         return response?.choices?.get(0)?.message?.content ?: throw RuntimeException("Can't get response")
     }
+
+    abstract fun createUserMessages(selectedFiles: List<ClassFile>): List<ChatMessage>
 }

@@ -128,7 +128,7 @@ class PluginToolWindowContent(private val project: Project) {
 
                 loadingPanel.visible(true)
 
-                val report = CodeCheckingService.analyseErrors(
+                val report = CodeCheckingService.analyse(
                     fileContent,
                     table.getCheckedRules()
                 ).result

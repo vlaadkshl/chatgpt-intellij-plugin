@@ -20,35 +20,29 @@ import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import javax.swing.JPanel
 
-object CodeCheckingService : ChatAbstractService() {
+object CodeCheckingService : ChatAnalysisAbstractService() {
 
-    private fun createErrorAnalysisRequest(selectedFiles: List<ClassFile>): List<ChatMessage> {
-        val messages = mutableListOf<ChatMessage>()
-
-        selectedFiles.forEach { file -> messages.add(convertFileToRequest(file)) }
-
-        return messages
+    override fun createUserMessages(selectedFiles: List<ClassFile>): List<ChatMessage> {
+        return selectedFiles.map {
+            ChatMessage(
+                ChatMessageRole.USER.value(),
+                """
+                    |Class Name: ${it.fileName}
+                    |Rules: ${it.rules.joinToString(separator = "\n", prefix = "- ")}
+                    |Code for checking:
+                    |${it.content}
+                """.trimMargin()
+            )
+        }
     }
 
-    private fun convertFileToRequest(file: ClassFile): ChatMessage {
-        return ChatMessage(
-            ChatMessageRole.USER.value(),
-            """
-                |Class Name: ${file.fileName}
-                |Rules: ${file.rules.joinToString(separator = "\n", prefix = "- ")}
-                |Code for checking:
-                |${file.content}
-            """.trimMargin()
-        )
-    }
-
-    fun analyseErrors(selectedFiles: MutableList<ClassFile>, rules: List<Rule>): WarningsResult {
+    fun analyse(selectedFiles: MutableList<ClassFile>, rules: List<Rule>): WarningsResult {
         for (file in selectedFiles) {
-            val applicableRules = rules.filter { rule -> rule.fileTypes.contains(file.type) }
-            file.rules = applicableRules.map { rule -> rule.rule }
+            val applicableRules = rules.filter { it.fileTypes.contains(file.type) }
+            file.rules = applicableRules.map { it.rule }
         }
 
-        selectedFiles.removeIf { file -> file.rules.isEmpty() }
+        selectedFiles.removeIf { it.rules.isEmpty() }
 
         if (selectedFiles.isEmpty()) {
             return WarningsResult(mutableListOf())
@@ -77,13 +71,13 @@ object CodeCheckingService : ChatAbstractService() {
                 ChatMessageRole.SYSTEM.value(), systemMessage
             )
         )
-        messages.addAll(createErrorAnalysisRequest(selectedFiles))
+        messages.addAll(createUserMessages(selectedFiles))
 
-        val request = buildCodeCheckingRequest(messages)
+        val request = buildRequest(messages)
         val response = sendRequestToChat(request)
 
         val decodedResponse = Json.decodeFromString<WarningsResult>(response)
-        decodedResponse.result = decodedResponse.result.filter { group -> group.warnings.isNotEmpty() }.toMutableList()
+        decodedResponse.result = decodedResponse.result.filter { it.warnings.isNotEmpty() }.toMutableList()
 
         return decodedResponse
     }
