@@ -4,6 +4,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.openapi.ui.Messages
@@ -130,7 +131,7 @@ class PluginToolWindowContent(private val project: Project) {
                     table.getCheckedRules()
                 ).result
 
-                ApplicationManager.getApplication().invokeLater {
+                DumbService.getInstance(project).smartInvokeLater {
                     loadingPanel.visible(false)
 
                     val reportPanel = CodeCheckingService.buildReportLabelText(report, project)
