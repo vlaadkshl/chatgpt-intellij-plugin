@@ -10,7 +10,10 @@ import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBRadioButton
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.dsl.builder.*
+import com.intellij.ui.dsl.builder.BottomGap
+import com.intellij.ui.dsl.builder.Cell
+import com.intellij.ui.dsl.builder.bind
+import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.layout.selected
 import com.sytoss.plugindemo.bom.ModuleChooseType
 import com.sytoss.plugindemo.bom.pyramid.Pyramid
@@ -19,13 +22,10 @@ import com.sytoss.plugindemo.services.CodeCheckingService
 import com.sytoss.plugindemo.services.PackageFinderService
 import com.sytoss.plugindemo.services.PyramidService
 import com.sytoss.plugindemo.ui.components.RulesTable
-import io.ktor.network.sockets.*
 import java.awt.GridLayout
 import java.awt.event.ActionEvent
-import javax.swing.JComboBox
-import javax.swing.JLabel
-import javax.swing.JPanel
-import javax.swing.SwingConstants
+import java.net.SocketTimeoutException
+import javax.swing.*
 import kotlin.concurrent.thread
 
 class PluginToolWindowContent(private val project: Project) {
@@ -38,17 +38,13 @@ class PluginToolWindowContent(private val project: Project) {
 
     private val loadingText = JLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
 
-    private lateinit var loadingLabel: Cell<JLabel>
+    private lateinit var loadingPanel: Cell<JLabel>
 
-    private val errorsText = panel {
-        row {
-            loadingLabel = cell(loadingText).visible(false)
-        }
-    }
-
-
+    private var errorsPanel = JPanel()
 
     private var pyramid: Pyramid? = null
+
+    private val splitter = OnePixelSplitter()
 
     private val panel: DialogPanel = panel {
         group {
@@ -82,10 +78,19 @@ class PluginToolWindowContent(private val project: Project) {
     }
 
     init {
-        val splitter = OnePixelSplitter()
-
         splitter.firstComponent = JBScrollPane(panel)
-        splitter.secondComponent = JBScrollPane(errorsText)
+        splitter.secondComponent = JBScrollPane(panel {
+            panel {
+                row {
+                    loadingPanel = cell(loadingText).visible(false)
+                }
+            }
+            panel {
+                row {
+                    cell(errorsPanel)
+                }
+            }
+        })
 
         contentPanel.add(splitter)
     }
@@ -109,18 +114,19 @@ class PluginToolWindowContent(private val project: Project) {
             try {
                 val fileContent = FileConverter.filesToClassFiles(packageFinder.pyramidElems)
 
-                loadingLabel.visible(true)
+                loadingPanel.visible(true)
 
                 val report = CodeCheckingService.analyseErrors(
                     fileContent,
                     table.getCheckedRules()
                 ).result
 
-                loadingLabel.visible(false)
-//                loadingText.icon = null
-//                loadingText.text =
-//                    if (report.isNotEmpty()) CodeCheckingService.buildReportLabelText(report, project)
-//                    else "Code doesn't have errors."
+                loadingPanel.visible(false)
+                if (report.isNotEmpty()) {
+                    SwingUtilities.invokeLater {
+                        CodeCheckingService.buildReportLabelText(report, errorsPanel, project)
+                    }
+                }
             } catch (e: Exception) {
                 loadingText.icon = AllIcons.General.BalloonError
                 if (e is SocketTimeoutException) {

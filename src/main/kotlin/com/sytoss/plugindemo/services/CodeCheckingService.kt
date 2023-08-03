@@ -1,8 +1,12 @@
 package com.sytoss.plugindemo.services
 
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.ui.components.ActionLink
+import com.intellij.ui.components.JBLabel
 import com.sytoss.plugindemo.bom.ClassFile
 import com.sytoss.plugindemo.bom.rules.Rule
 import com.sytoss.plugindemo.bom.warnings.ClassGroup
@@ -15,6 +19,8 @@ import com.theokanning.openai.service.OpenAiService
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.time.Duration
+import javax.swing.JEditorPane
+import javax.swing.JPanel
 
 object CodeCheckingService {
 
@@ -104,45 +110,55 @@ object CodeCheckingService {
         return decodedResponse
     }
 
-    private fun getClassPath(warningClass: ClassGroup, project: Project): String? {
+    private fun getClassVirtualFile(warningClass: ClassGroup, project: Project): VirtualFile? {
         val (qualifiedName) = warningClass
         val psiClass = JavaPsiFacade.getInstance(project).findClass(
             qualifiedName,
             GlobalSearchScope.projectScope(project)
         )
 
-        return if (psiClass != null) "file:///${psiClass.containingFile?.virtualFile?.path}" else null
+        return psiClass?.containingFile?.virtualFile
     }
 
-    fun buildReportLabelText(report: List<ClassGroup>, project: Project): String {
-        val reportBuilder = StringBuilder("<html><head></head><body>")
+    fun buildReportLabelText(report: List<ClassGroup>, errors: JPanel, project: Project) {
+        errors.removeAll()
+
+        if (report.isEmpty()) {
+            val text = JEditorPane()
+            text.text = "No errors were found."
+            errors.add(text)
+
+            return
+        }
 
         for (classGroup in report) {
-            val path = getClassPath(classGroup, project)
+            val file: VirtualFile? = getClassVirtualFile(classGroup, project)
 
-            reportBuilder.append(
-                """
-                    |<p>
-                        |<a href="$path"><b>${classGroup.className}</b></a>
-                    |</p>
-                """.trimMargin()
-            )
+            if (file != null) {
+                errors.add(ActionLink(classGroup.className) {
+                    FileEditorManager.getInstance(project).openFile(file, true)
+                })
+            } else {
+                errors.add(JBLabel("${classGroup.className} (NO LINK)"))
+            }
 
             for (warning in classGroup.warnings) {
-                reportBuilder.append(
-                    """
-                        |<p>
-                        |    Warning: ${warning.warning}<br>
-                        |    Line: ${warning.lineInCode}
-                        |</p>
-                    """.trimMargin()
+                errors.add(
+                    JBLabel(
+                        """
+                            |<b>Warning: </b><span>${warning.warning}</span>
+                        """.trimMargin()
+                    )
+                )
+                errors.add(
+                    JBLabel(
+                        """
+                            |<b>Line: </b><span>${warning.lineInCode}</span>
+                        """.trimMargin()
+                    )
                 )
             }
         }
-
-        reportBuilder.append("</body></html>")
-
-        return reportBuilder.toString()
     }
 
     fun analysePyramid(selectedFiles: List<ClassFile>): String {
