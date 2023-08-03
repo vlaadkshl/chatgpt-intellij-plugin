@@ -1,6 +1,7 @@
 package com.sytoss.plugindemo.ui
 
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
@@ -59,7 +60,7 @@ class PluginToolWindowContent(private val project: Project) {
                     val modules = ModuleManager.getInstance(project).modules.asList()
 
                     val combo = comboBox(modules)
-                    combo.component.addActionListener { event -> selectModule(event) }
+                    combo.component.addActionListener { selectModule(it) }
 
                     combo.component.selectedItem = modules[0]
                 }
@@ -72,7 +73,11 @@ class PluginToolWindowContent(private val project: Project) {
         }.bottomGap(BottomGap.MEDIUM)
 
         row("Pyramid Matching Feature") {
-            button("Select Pyramid JSON") { event -> pyramid = PyramidService.selectPyramid(event, project) }
+            button("Select Pyramid JSON") {
+                ApplicationManager.getApplication().invokeLater {
+                    pyramid = PyramidService.selectPyramid(it, project)
+                }
+            }
             button("Pyramid Matching Analysis") { analysePyramid() }
         }
     }
@@ -122,7 +127,7 @@ class PluginToolWindowContent(private val project: Project) {
                     table.getCheckedRules()
                 ).result
 
-                SwingUtilities.invokeLater {
+                ApplicationManager.getApplication().invokeLater {
                     loadingPanel.visible(false)
 
                     val reportPanel = CodeCheckingService.buildReportLabelText(report, project)
