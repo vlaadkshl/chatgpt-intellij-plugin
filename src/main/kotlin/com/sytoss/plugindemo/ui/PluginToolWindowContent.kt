@@ -26,7 +26,10 @@ import com.sytoss.plugindemo.ui.components.RulesTable
 import java.awt.GridLayout
 import java.awt.event.ActionEvent
 import java.net.SocketTimeoutException
-import javax.swing.*
+import javax.swing.JComboBox
+import javax.swing.JLabel
+import javax.swing.JPanel
+import javax.swing.SwingConstants
 import kotlin.concurrent.thread
 
 class PluginToolWindowContent(private val project: Project) {
@@ -138,7 +141,7 @@ class PluginToolWindowContent(private val project: Project) {
                 if (e is SocketTimeoutException) {
                     loadingText.text = "Oops... We have a timeout error.\nPlease, try again!"
                 } else {
-                    loadingText.text = """Error: ${e.message}""".trimMargin()
+                    loadingText.text = "Error: ${e.message}"
                 }
             }
         }
