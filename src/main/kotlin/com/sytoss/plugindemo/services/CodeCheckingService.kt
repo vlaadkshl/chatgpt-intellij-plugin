@@ -1,8 +1,13 @@
 package com.sytoss.plugindemo.services
 
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.ui.components.ActionLink
+import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.Label
 import com.sytoss.plugindemo.bom.ClassFile
 import com.sytoss.plugindemo.bom.rules.Rule
 import com.sytoss.plugindemo.bom.warnings.ClassGroup
@@ -14,7 +19,10 @@ import com.theokanning.openai.completion.chat.ChatMessageRole
 import com.theokanning.openai.service.OpenAiService
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import java.awt.GridBagConstraints
+import java.awt.GridBagLayout
 import java.time.Duration
+import javax.swing.JPanel
 
 object CodeCheckingService {
 
@@ -104,45 +112,59 @@ object CodeCheckingService {
         return decodedResponse
     }
 
-    private fun getClassPath(warningClass: ClassGroup, project: Project): String? {
+    private fun getClassVirtualFile(warningClass: ClassGroup, project: Project): VirtualFile? {
         val (qualifiedName) = warningClass
         val psiClass = JavaPsiFacade.getInstance(project).findClass(
             qualifiedName,
             GlobalSearchScope.projectScope(project)
         )
 
-        return if (psiClass != null) "file:///${psiClass.containingFile?.virtualFile?.path}" else null
+        return psiClass?.containingFile?.virtualFile
     }
 
-    fun buildReportLabelText(report: List<ClassGroup>, project: Project): String {
-        val reportBuilder = StringBuilder("<html><head></head><body>")
+    fun buildReportLabelText(report: List<ClassGroup>, project: Project): JPanel {
+        val panel = JPanel(GridBagLayout())
 
-        for (classGroup in report) {
-            val path = getClassPath(classGroup, project)
+        val constraints = GridBagConstraints()
+        constraints.gridx = 0
+        constraints.gridy = GridBagConstraints.RELATIVE
+        constraints.anchor = GridBagConstraints.WEST
 
-            reportBuilder.append(
-                """
-                    |<p>
-                        |<a href="$path"><b>${classGroup.className}</b></a>
-                    |</p>
-                """.trimMargin()
-            )
+        if (report.isEmpty()) {
+            panel.add(Label("No errors were found."), constraints)
+        } else {
+            for (classGroup in report) {
+                val classPanel = JPanel(GridBagLayout())
 
-            for (warning in classGroup.warnings) {
-                reportBuilder.append(
-                    """
-                        |<p>
-                        |    Warning: ${warning.warning}<br>
-                        |    Line: ${warning.lineInCode}
-                        |</p>
-                    """.trimMargin()
-                )
+                val file: VirtualFile? = getClassVirtualFile(classGroup, project)
+
+                if (file != null) {
+                    classPanel.add(ActionLink(classGroup.className) {
+                        FileEditorManager.getInstance(project).openFile(file, true)
+                    }, constraints)
+                } else {
+                    classPanel.add(JBLabel("${classGroup.className} (NO LINK)"), constraints)
+                }
+
+                for (warning in classGroup.warnings) {
+                    val warningPanel = JPanel()
+                    warningPanel.add(Label("Warning: ", null, null, true))
+                    warningPanel.add(Label(warning.warning))
+
+                    val linePanel = JPanel()
+                    linePanel.add(Label("Line: ", null, null, true))
+                    linePanel.add(Label(warning.lineInCode))
+
+                    classPanel.add(warningPanel, constraints)
+                    classPanel.add(linePanel, constraints)
+                }
+
+                panel.add(classPanel, constraints)
             }
         }
 
-        reportBuilder.append("</body></html>")
 
-        return reportBuilder.toString()
+        return panel
     }
 
     fun analysePyramid(selectedFiles: List<ClassFile>): String {
