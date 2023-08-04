@@ -2,9 +2,6 @@ package com.sytoss.plugindemo.services.chat
 
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.JavaPsiFacade
-import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.Label
@@ -82,17 +79,7 @@ object CodeCheckingService : ChatAnalysisAbstractService() {
         return decodedResponse
     }
 
-    private fun getClassVirtualFile(warningClass: ClassGroup, project: Project): VirtualFile? {
-        val (qualifiedName) = warningClass
-        val psiClass = JavaPsiFacade.getInstance(project).findClass(
-            qualifiedName,
-            GlobalSearchScope.projectScope(project)
-        )
-
-        return psiClass?.containingFile?.virtualFile
-    }
-
-    fun buildReportLabelText(report: List<ClassGroup>, project: Project): JPanel {
+    fun buildReportUi(report: List<ClassGroup>, project: Project): JPanel {
         val panel = JPanel(GridBagLayout())
 
         val constraints = GridBagConstraints()

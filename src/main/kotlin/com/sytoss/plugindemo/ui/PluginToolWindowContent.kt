@@ -136,7 +136,7 @@ class PluginToolWindowContent(private val project: Project) {
                 DumbService.getInstance(project).smartInvokeLater {
                     loadingPanel.visible(false)
 
-                    val reportPanel = CodeCheckingService.buildReportLabelText(report, project)
+                    val reportPanel = CodeCheckingService.buildReportUi(report, project)
                     errorsPanel.add(reportPanel)
                 }
             } catch (e: Exception) {
@@ -151,15 +151,33 @@ class PluginToolWindowContent(private val project: Project) {
     }
 
     private fun analysePyramid() {
-        if (pyramidFile != null) {
-            pyramid = PyramidService.parseJson(pyramidFile!!)
-            val fileContent = FileConverter.filesToClassFiles(packageFinder.pyramidElems)
-
-            val report = PyramidCheckingService.analyse(fileContent)
-
-            Messages.showMessageDialog(null, report.toString(), "Pyramid Review Results", Messages.getInformationIcon())
-        } else {
+        if (pyramidFile == null) {
             Messages.showErrorDialog("First select the \"pyramid.json\" file!", "Error: Analysing Pyramid")
+        }
+
+        thread {
+            try {
+                pyramid = PyramidService.parseJson(pyramidFile!!)
+                val fileContent = FileConverter.filesToClassFiles(packageFinder.pyramidElems)
+
+                loadingPanel.visible(true)
+
+                val report = PyramidCheckingService.analyse(fileContent).result
+
+                DumbService.getInstance(project).smartInvokeLater {
+                    loadingPanel.visible(false)
+
+                    val reportPanel = PyramidCheckingService.buildReportUi(report, project)
+                    errorsPanel.add(reportPanel)
+                }
+            } catch (e: Exception) {
+                loadingText.icon = AllIcons.General.BalloonError
+                if (e is SocketTimeoutException) {
+                    loadingText.text = "Oops... We have a timeout error.\nPlease, try again!"
+                } else {
+                    loadingText.text = "Error: ${e.message}"
+                }
+            }
         }
     }
 }

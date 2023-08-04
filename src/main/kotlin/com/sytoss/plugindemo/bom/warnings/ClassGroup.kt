@@ -6,4 +6,4 @@ import kotlinx.serialization.Serializable
 data class ClassGroup(
     val className: String,
     val warnings: List<ClassWarning>
-)
+) : ClassGroupTemplate(className)
