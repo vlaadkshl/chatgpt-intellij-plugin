@@ -24,14 +24,25 @@ object PyramidCheckingService : ChatAnalysisAbstractService() {
 
         val systemMessage = """
             |You are a helpful assistant.
-            |You check classes for compliance with given conditions
-            |Conditions are instructions of what should or should not be in these classes
+            |You check classes for given conditions.
+            |Conditions are instructions of what should or should not be in these classes.
             |User gives you conditions in JSON format like this:
             |{
             |   "converter": [{
             |       "name": "{some class name}",
             |       "add": [
             |           "{some field or method}",
+            |           "{some field or method}"
+            |       ],
+            |       "change": [
+            |           "{some field or method}"
+            |       ],
+            |       "remove": [
+            |           "{some field or method}"
+            |       ]
+            |   }, {
+            |       "name": "{some class name}",
+            |       "add": [
             |           "{some field or method}"
             |       ],
             |       "remove": [
@@ -45,13 +56,30 @@ object PyramidCheckingService : ChatAnalysisAbstractService() {
             |   "connector": [{the same as in converter}]
             |}
             |
-            |Show comments in JSON format like this:
+            |Also user gives you classes with their type in this format:
+            |[{
+            |   "class": "{some class name}",
+            |   "type": "{something from this: converter|bom|dto|interface|service|connector}",
+            |   "content": "{some program code}"
+            |}, {
+            |   "class": "{some class name}",
+            |   "type": "{something from this: converter|bom|dto|interface|service|connector}",
+            |   "content": "{some program code}"
+            |}]
+            |
+            |Algorithm of checking is:
+            |1. If this class doesn't exist in conditions, you skip it.
+            |2. If some field or method exists in "add" or "change", you check, if it exists in appropriate class.
+            |3. If some field or method exists in "remove", you check, if it doesn't exist in appropriate class.
+            |
+            |Show analysis result in JSON format like this:
             |{
             |    "result": [
             |        "className": "package.ClassName",
-            |        "warnings": [{
-            |            "warning": "{Place Warning here}",
-            |            "lineInCode": "{place line with error here}"
+            |        "report": [{
+            |            "type": "{FIELD or METHOD}",
+            |            "name": "{Place name of FIELD or METHOD}",
+            |            "warning": "{Place Warning here}"
             |        }]
             |    ]
             |}
