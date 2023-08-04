@@ -1,9 +1,14 @@
 package com.sytoss.plugindemo.services.chat
 
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.util.containers.toMutableSmartList
 import com.sytoss.plugindemo.bom.ClassFile
+import com.sytoss.plugindemo.bom.PyramidAnalysisResult
 import com.sytoss.plugindemo.bom.pyramid.Pyramid
 import com.theokanning.openai.completion.chat.ChatMessage
+import com.theokanning.openai.completion.chat.ChatMessageRole
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 
 object PyramidCheckingService : ChatAnalysisAbstractService() {
 
@@ -11,13 +16,7 @@ object PyramidCheckingService : ChatAnalysisAbstractService() {
 
     var pyramid: Pyramid? = null
 
-    fun analysePyramid(selectedFiles: List<ClassFile>): String {
-        val messages = createUserMessages(selectedFiles)
-        val request = buildRequest(messages)
-        return sendRequestToChat(request)
-    }
-
-    override fun createUserMessages(selectedFiles: List<ClassFile>): List<ChatMessage> {
+    fun analyse(selectedFiles: List<ClassFile>): PyramidAnalysisResult {
         if (pyramid == null) {
             throw IllegalStateException("No pyramid was found!")
         }
@@ -57,15 +56,12 @@ object PyramidCheckingService : ChatAnalysisAbstractService() {
             |}
             |
             |Also user gives you classes with their type in this format:
-            |[{
-            |   "class": "{some class name}",
-            |   "type": "{something from this: converter|bom|dto|interface|service|connector}",
-            |   "content": "{some program code}"
-            |}, {
-            |   "class": "{some class name}",
-            |   "type": "{something from this: converter|bom|dto|interface|service|connector}",
-            |   "content": "{some program code}"
-            |}]
+            |Class: {some class name},
+            |Type: {something from this: converter|bom|dto|interface|service|connector},
+            |Content:
+            |```
+            |{some program code multi-line}
+            |```
             |
             |Algorithm of checking is:
             |1. If this class doesn't exist in conditions, you skip it.
@@ -86,6 +82,35 @@ object PyramidCheckingService : ChatAnalysisAbstractService() {
             |If there is no errors for class, don't put it in result
         """.trimMargin()
 
-        return mutableListOf()
+        val messages = mutableListOf(
+            ChatMessage(
+                ChatMessageRole.SYSTEM.value(), systemMessage
+            )
+        )
+        messages.addAll(createUserMessages(selectedFiles))
+
+        val request = buildRequest(messages)
+        val response = sendRequestToChat(request)
+
+        val decodedResponse = Json.decodeFromString<PyramidAnalysisResult>(response)
+        decodedResponse.result = decodedResponse.result.filter { it.report.isNotEmpty() }.toMutableList()
+
+        return decodedResponse
+    }
+
+    override fun createUserMessages(selectedFiles: List<ClassFile>): List<ChatMessage> {
+        return selectedFiles.map {
+            ChatMessage(
+                ChatMessageRole.USER.value(),
+                """
+                    Class: ${it.fileName},
+                    Type: ${it.type},
+                    Content:
+                    ```
+                    ${it.content}
+                    ```
+                """.trimIndent()
+            )
+        }
     }
 }

@@ -155,9 +155,9 @@ class PluginToolWindowContent(private val project: Project) {
             pyramid = PyramidService.parseJson(pyramidFile!!)
             val fileContent = FileConverter.filesToClassFiles(packageFinder.pyramidElems)
 
-            val report = PyramidCheckingService.analysePyramid(fileContent)
+            val report = PyramidCheckingService.analyse(fileContent)
 
-            Messages.showMessageDialog(null, report, "Pyramid Review Results", Messages.getInformationIcon())
+            Messages.showMessageDialog(null, report.toString(), "Pyramid Review Results", Messages.getInformationIcon())
         } else {
             Messages.showErrorDialog("First select the \"pyramid.json\" file!", "Error: Analysing Pyramid")
         }
