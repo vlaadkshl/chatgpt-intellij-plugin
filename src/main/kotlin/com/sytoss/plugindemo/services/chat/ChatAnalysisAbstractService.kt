@@ -5,15 +5,12 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
 import com.sytoss.plugindemo.bom.ClassFile
-import com.sytoss.plugindemo.bom.warnings.ClassGroup
 import com.sytoss.plugindemo.bom.warnings.ClassGroupTemplate
 import com.theokanning.openai.client.OpenAiApi
 import com.theokanning.openai.completion.chat.ChatCompletionRequest
 import com.theokanning.openai.completion.chat.ChatMessage
 import com.theokanning.openai.service.OpenAiService
 import java.time.Duration
-import javax.swing.JPanel
-import kotlin.reflect.jvm.internal.impl.metadata.ProtoBuf
 
 abstract class ChatAnalysisAbstractService {
 
@@ -37,12 +34,11 @@ abstract class ChatAnalysisAbstractService {
     }
 
     protected fun getClassVirtualFile(warningClass: ClassGroupTemplate, project: Project): VirtualFile? {
-        val qualifiedName = warningClass.name
+        val qualifiedName = warningClass.className
         val psiClass = JavaPsiFacade.getInstance(project).findClass(
             qualifiedName,
             GlobalSearchScope.projectScope(project)
         )
-
         return psiClass?.containingFile?.virtualFile
     }
 

@@ -155,9 +155,18 @@ class PluginToolWindowContent(private val project: Project) {
             Messages.showErrorDialog("First select the \"pyramid.json\" file!", "Error: Analysing Pyramid")
         }
 
+        panel.apply()
+        packageFinder.findPackages()
+
+        if (packageFinder.isPyramidEmpty()) {
+            Messages.showErrorDialog("This module is empty. I can't find any content, such as BOMs, DTOs, converters etc.", "Module Error")
+            return
+        }
+
         thread {
             try {
                 pyramid = PyramidService.parseJson(pyramidFile!!)
+
                 val fileContent = FileConverter.filesToClassFiles(packageFinder.pyramidElems)
 
                 loadingPanel.visible(true)

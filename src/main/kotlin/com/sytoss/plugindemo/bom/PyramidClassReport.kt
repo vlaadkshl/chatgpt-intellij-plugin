@@ -5,6 +5,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class PyramidClassReport(
-    val className: String,
+    override val className: String,
     val report: MutableList<PyramidReport>
-) : ClassGroupTemplate(className)
+) : ClassGroupTemplate()

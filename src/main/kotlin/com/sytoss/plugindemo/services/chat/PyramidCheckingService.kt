@@ -30,72 +30,80 @@ object PyramidCheckingService : ChatAnalysisAbstractService() {
             throw IllegalStateException("No pyramid was found!")
         }
 
-        val systemMessage = """
-            |You are a helpful assistant.
-            |You check classes for given conditions.
-            |Conditions are instructions of what should or should not be in these classes.
-            |User gives you conditions in JSON format like this:
-            |{
-            |   "converter": [{
-            |       "name": "{some class name}",
-            |       "add": [
-            |           "{some field or method}",
-            |           "{some field or method}"
-            |       ],
-            |       "change": [
-            |           "{some field or method}"
-            |       ],
-            |       "remove": [
-            |           "{some field or method}"
-            |       ]
-            |   }, {
-            |       "name": "{some class name}",
-            |       "add": [
-            |           "{some field or method}"
-            |       ],
-            |       "remove": [
-            |           "{some field or method}"
-            |       ]
-            |   }],
-            |   "bom": [{the same as in converter}],
-            |   "dto": [{the same as in converter}],
-            |   "interface": [{the same as in converter}],
-            |   "service": [{the same as in converter}],
-            |   "connector": [{the same as in converter}]
-            |}
-            |
-            |Also user gives you classes with their type in this format:
-            |Class: {some class name},
-            |Type: {something from this: converter|bom|dto|interface|service|connector},
-            |Content:
-            |```
-            |{some program code multi-line}
-            |```
-            |
-            |Algorithm of checking is:
-            |1. If this class doesn't exist in conditions, you skip it.
-            |2. If some field or method exists in "add" or "change", you check, if it exists in appropriate class.
-            |3. If some field or method exists in "remove", you check, if it doesn't exist in appropriate class.
-            |
-            |Show analysis result in JSON format like this:
-            |{
-            |    "result": [
-            |        "className": "package.ClassName",
-            |        "report": [{
-            |            "type": "{FIELD or METHOD}",
-            |            "name": "{Place name of FIELD or METHOD}",
-            |            "warning": "{Place Warning here}"
-            |        }]
-            |    ]
-            |}
-            |If there is no errors for class, don't put it in result
-        """.trimMargin()
-
-        val messages = mutableListOf(
-            ChatMessage(
-                ChatMessageRole.SYSTEM.value(), systemMessage
-            )
+        val systemMessages = mutableListOf(
+            """
+            You are a helpful assistant.
+            You check classes for given conditions and give result of analysis to the user.
+            You don't create code for checking, you just analyse given code according to the conditions.
+            Conditions are instructions of what should or should not be in these classes.
+        """.trimIndent(),
+//            """
+//            User gives you conditions in JSON format like this:
+//            {
+//               "converter": [{
+//                   "name": "{some class name}",
+//                   "add": [
+//                       "{some field or method}",
+//                       "{some field or method}"
+//                   ],
+//                   "change": [
+//                       "{some field or method}"
+//                   ],
+//                   "remove": [
+//                       "{some field or method}"
+//                   ]
+//               }, {
+//                   "name": "{some class name}",
+//                   "add": [
+//                       "{some field or method}"
+//                   ],
+//                   "remove": [
+//                       "{some field or method}"
+//                   ]
+//               }],
+//               "bom": [{the same as in converter}],
+//               "dto": [{the same as in converter}],
+//               "interface": [{the same as in converter}],
+//               "service": [{the same as in converter}],
+//               "connector": [{the same as in converter}]
+//            }
+//        """.trimIndent(),
+            """
+            Also user gives you classes with their type in this format:
+            Class: {some class name},
+            Type: {something from this: converter|bom|dto|interface|service|connector},
+            Content:
+            ```
+            {some program code multi-line}
+            ```
+        """.trimIndent(), """
+            IMPORTANT! Show analysis result in JSON format only according to this template:
+            {
+                "result": [
+                    "className": "package.ClassName",
+                    "report": [{
+                        "type": "{FIELD or METHOD}",
+                        "name": "{Place name of FIELD or METHOD}",
+                        "warning": "{Place Warning here}"
+                    }]
+                ]
+            }
+            If there is no errors for class, don't put it in result
+        """.trimIndent(), """
+            Here are the steps you must follow while checking the code:
+            1. If this class doesn't exist in conditions, you skip it.
+            2. If some field or method exists in "add" or "change", you check, if it exists in appropriate class. If don't, you say it in warning.
+            3. If some field or method exists in "remove", you check, if it doesn't exist in appropriate class. If exists, you say it in warning.
+            4. If some field or method isn't mentioned in conditions, you skip it.
+        """.trimIndent()
         )
+
+        val messages = mutableListOf<ChatMessage>()
+        messages.addAll(systemMessages.map {
+            ChatMessage(
+                ChatMessageRole.SYSTEM.value(), it
+            )
+        })
         messages.addAll(createUserMessages(selectedFiles))
 
         val request = buildRequest(messages)
