@@ -110,7 +110,7 @@ object PyramidCheckingService : ChatAnalysisAbstractService() {
         val response = sendRequestToChat(request)
 
         val decodedResponse = Json.decodeFromString<PyramidAnalysisResult>(response)
-        decodedResponse.result = decodedResponse.result.filter { it.report.isNotEmpty() }.toMutableList()
+        decodedResponse.result.removeIf { it.report.isEmpty() }
 
         return decodedResponse
     }
