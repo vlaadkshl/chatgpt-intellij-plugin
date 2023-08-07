@@ -118,7 +118,7 @@ class PluginToolWindowContent(private val project: Project) {
         packageFinder.findPackages()
 
         if (packageFinder.isPyramidEmpty()) {
-            Messages.showErrorDialog("First, select the module", "Module Error")
+            Messages.showErrorDialog("This module is empty. I can't find any content, such as BOMs, DTOs, converters etc.", "Module Error")
             return
         }
 
