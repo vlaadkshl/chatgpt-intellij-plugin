@@ -55,8 +55,8 @@ object CodeCheckingService : ChatAnalysisAbstractService() {
             |    "result": [
             |        "className": "package.ClassName",
             |        "warnings": [{
-            |            "warning": "{Place Warning here}",
-            |            "lineInCode": "{place line with error here}"
+            |            "warning": "{Place warning here}",
+            |            "lineInCode": "{Place line with error here}"
             |        }]
             |    ]
             |}
