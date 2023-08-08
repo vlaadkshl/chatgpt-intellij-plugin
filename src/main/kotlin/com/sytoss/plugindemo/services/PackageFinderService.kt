@@ -8,7 +8,6 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiManager
-import com.intellij.ui.dsl.builder.Panel
 import com.sytoss.plugindemo.bom.FileTypes
 import com.sytoss.plugindemo.bom.ModuleChooseType
 import com.sytoss.plugindemo.bom.PackageFinderDetails
@@ -22,13 +21,8 @@ class PackageFinderService(
 
     private var fileTypes = JsonService.fromJsonResourceFile<FileTypes>("/fileTypes.json").fileTypes
 
-    val pyramidElems: MutableMap<String, PackageFinderDetails> = mutableMapOf()
-
-    init {
-        for (type in fileTypes) {
-            pyramidElems[type] = PackageFinderDetails(false)
-        }
-    }
+    val pyramidElems: MutableMap<String, PackageFinderDetails> =
+        fileTypes.associateBy({ it }, { PackageFinderDetails(false) }).toMutableMap()
 
     fun isPyramidEmpty(): Boolean {
         var isEmpty = true
