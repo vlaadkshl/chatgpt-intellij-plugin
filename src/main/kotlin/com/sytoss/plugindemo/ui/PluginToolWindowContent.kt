@@ -90,21 +90,18 @@ class PluginToolWindowContent(private val project: Project) {
     init {
         contentPanel.firstComponent = JBScrollPane(controlPanel)
         contentPanel.secondComponent = JBScrollPane(panel {
-            panel {
-                row {
-                    loadingLabel = cell(
-                        JLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
-                    ).visible(false)
-
-                    errorLabel = cell(
-                        JLabel("", AllIcons.General.BalloonError, SwingConstants.LEFT)
-                    ).visible(false)
-                }
+            row {
+                loadingLabel = cell(
+                    JLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
+                ).visible(false)
             }
-            panel {
-                row {
-                    cell(warningsPanel)
-                }
+            row {
+                errorLabel = cell(
+                    JLabel("", AllIcons.General.BalloonError, SwingConstants.LEFT)
+                ).visible(false)
+            }
+            row {
+                cell(warningsPanel)
             }
         })
     }
