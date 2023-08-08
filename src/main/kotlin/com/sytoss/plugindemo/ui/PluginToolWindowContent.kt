@@ -61,8 +61,9 @@ class PluginToolWindowContent(private val project: Project) {
         indent {
             row("Choose Modules") {
                 val combo = comboBox(modules)
-                combo.component.addActionListener { selectModule(it) }
-
+                combo.component.addActionListener {
+                    packageFinder.module = (it.source as JComboBox<*>).selectedItem as Module
+                }
                 combo.component.selectedItem = modules[0]
             }
         }.enabledIf(oneModuleRadio.component.selected)
@@ -104,11 +105,6 @@ class PluginToolWindowContent(private val project: Project) {
                 cell(warningsPanel)
             }
         })
-    }
-
-    private fun selectModule(event: ActionEvent) {
-        val selected: Module = (event.source as JComboBox<*>).selectedItem as Module
-        packageFinder.module = selected
     }
 
     private fun analyseErrors() {
