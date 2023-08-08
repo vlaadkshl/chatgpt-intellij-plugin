@@ -76,7 +76,9 @@ class PluginToolWindowContent(private val project: Project) {
             button("Select Pyramid JSON") {
                 DumbService.getInstance(project).smartInvokeLater {
                     pyramidFile = PyramidService.selectPyramid(it.source as JButton, project)
-                    pyramidAnalysisButton.enabled(true)
+                    if (pyramidFile != null) {
+                        pyramidAnalysisButton.enabled(true)
+                    }
                 }
             }
             pyramidAnalysisButton = button("Pyramid Matching Analysis") {
