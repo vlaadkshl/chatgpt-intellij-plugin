@@ -46,28 +46,26 @@ class PluginToolWindowContent(private val project: Project) {
     private lateinit var pyramidAnalysisButton: Cell<*>
 
     private val controlPanel = panel {
-        group {
-            lateinit var oneModuleRadio: Cell<JBRadioButton>
-            buttonsGroup(title = "Module Mode", indent = false) {
-                row {
-                    radioButton("All modules", value = ModuleChooseType.ALL_MODULES)
-                }
-                row {
-                    oneModuleRadio = radioButton("One module", value = ModuleChooseType.ONE_MODULE)
-                }
-            }.bind(packageFinder::moduleChooseType) { packageFinder.moduleChooseType = it }
+        lateinit var oneModuleRadio: Cell<JBRadioButton>
+        buttonsGroup(title = "Module Mode", indent = false) {
+            row {
+                radioButton("All modules", value = ModuleChooseType.ALL_MODULES)
+            }
+            row {
+                oneModuleRadio = radioButton("One module", value = ModuleChooseType.ONE_MODULE)
+            }
+        }.bind(packageFinder::moduleChooseType) { packageFinder.moduleChooseType = it }
 
-            indent {
-                row("Choose Modules") {
-                    val modules = ModuleManager.getInstance(project).modules.asList()
+        indent {
+            row("Choose Modules") {
+                val modules = ModuleManager.getInstance(project).modules.asList()
 
-                    val combo = comboBox(modules)
-                    combo.component.addActionListener { selectModule(it) }
+                val combo = comboBox(modules)
+                combo.component.addActionListener { selectModule(it) }
 
-                    combo.component.selectedItem = modules[0]
-                }
-            }.enabledIf(oneModuleRadio.component.selected)
-        }.bottomGap(BottomGap.MEDIUM)
+                combo.component.selectedItem = modules[0]
+            }
+        }.enabledIf(oneModuleRadio.component.selected)
 
         row("Code Analysis Feature") {
             cell(table)

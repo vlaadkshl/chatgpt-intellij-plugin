@@ -5,7 +5,6 @@ import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.vfs.newvfs.impl.FakeVirtualFile
 import com.sytoss.plugindemo.bom.pyramid.Pyramid
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -13,8 +12,8 @@ import java.nio.file.Files
 import javax.swing.JButton
 
 object PyramidService {
-    fun selectPyramid(sourceButton: JButton, project: Project): VirtualFile {
-        var returnFile: VirtualFile = FakeVirtualFile(project.projectFile!!, "")
+    fun selectPyramid(sourceButton: JButton, project: Project): VirtualFile? {
+        var returnFile: VirtualFile? = null
 
         FileChooser.chooseFile(
             FileChooserDescriptorFactory.createSingleFileDescriptor("json"), project, null
