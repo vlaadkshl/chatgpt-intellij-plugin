@@ -2,7 +2,8 @@ package com.sytoss.plugindemo.ui.components
 
 import com.intellij.openapi.ui.Messages
 import com.sytoss.plugindemo.bom.rules.Rule
-import com.sytoss.plugindemo.services.RuleService
+import com.sytoss.plugindemo.bom.rules.Rules
+import com.sytoss.plugindemo.services.JsonService
 import java.io.FileNotFoundException
 import javax.swing.JTable
 import javax.swing.table.DefaultTableModel
@@ -13,7 +14,8 @@ class RulesTable : JTable(DefaultTableModel(null, arrayOf("Name", ""))) {
 
     init {
         try {
-            for (rule in RuleService.getRules()) {
+            val rules = JsonService.fromJsonResourceFile<Rules>("/rules.json").rules
+            for (rule in rules) {
                 rulesMap[rule] = true
             }
         } catch (e: FileNotFoundException) {
