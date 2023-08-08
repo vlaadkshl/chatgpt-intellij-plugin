@@ -8,13 +8,11 @@
     <depends>com.intellij.java</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.sytoss.plugindemo.ui.PluginToolWindowFactory"
+        <toolWindow factoryClass="com.sytoss.aiHelper.ui.PluginToolWindowFactory"
                     id="Sytoss AI Helper"
                     secondary="true"
                     icon="AllIcons.Toolwindows.NoEvents"
                     anchor="bottom"
         />
-        <!--        <localInspection implementationClass="com.sytoss.plugindemo.services.ProblemChecker"-->
-        <!--                         displayName="My inspection" enabledByDefault="true"/>-->
     </extensions>
 </idea-plugin>
