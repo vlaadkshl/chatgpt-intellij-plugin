@@ -1,4 +1,4 @@
-package com.sytoss.plugindemo.bom.rules
+package com.sytoss.plugindemo.bom.chat.checkingCode.rules
 
 import kotlinx.serialization.Serializable
 

@@ -1,9 +1,9 @@
-package com.sytoss.plugindemo.bom
+package com.sytoss.plugindemo.bom.chat.pyramid.result
 
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class PyramidReport(
+data class PyramidAnalysisContent(
     val type: ReportClassType,
     val name: String,
     val warning: String

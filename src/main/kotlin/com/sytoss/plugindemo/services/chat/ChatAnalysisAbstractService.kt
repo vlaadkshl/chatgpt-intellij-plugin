@@ -4,8 +4,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
-import com.sytoss.plugindemo.bom.ClassFile
-import com.sytoss.plugindemo.bom.warnings.ClassGroupTemplate
+import com.sytoss.plugindemo.bom.chat.ChatMessageClassData
+import com.sytoss.plugindemo.bom.chat.warnings.ClassGroupTemplate
 import com.theokanning.openai.client.OpenAiApi
 import com.theokanning.openai.completion.chat.ChatCompletionRequest
 import com.theokanning.openai.completion.chat.ChatMessage
@@ -42,5 +42,5 @@ abstract class ChatAnalysisAbstractService {
         return psiClass?.containingFile?.virtualFile
     }
 
-    abstract fun createUserMessages(selectedFiles: List<ClassFile>): List<ChatMessage>
+    abstract fun createUserMessages(selectedFiles: List<ChatMessageClassData>): List<ChatMessage>
 }

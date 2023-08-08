@@ -7,8 +7,8 @@ import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiManager
-import com.sytoss.plugindemo.bom.ClassFile
-import com.sytoss.plugindemo.bom.FileTypes
+import com.sytoss.plugindemo.bom.chat.ChatMessageClassData
+import com.sytoss.plugindemo.bom.types.FileTypes
 import com.sytoss.plugindemo.bom.ModuleChooseType
 import com.sytoss.plugindemo.bom.PackageFinderDetails
 import java.nio.file.Files
@@ -112,14 +112,14 @@ object PackageFinder {
         setFilesToMap()
     }
 
-    fun toClassFiles(): MutableList<ClassFile> {
-        val fileList = mutableListOf<ClassFile>()
+    fun toClassFiles(): MutableList<ChatMessageClassData> {
+        val fileList = mutableListOf<ChatMessageClassData>()
 
         for ((type, value) in filesMap) {
             if (value.files.isNotEmpty()) {
                 for (file in value.files) {
                     fileList.add(
-                        ClassFile(
+                        ChatMessageClassData(
                             fileName = file.nameWithoutExtension,
                             content = Files.readString(file.toNioPath()),
                             type = type

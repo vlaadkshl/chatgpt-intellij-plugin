@@ -1,4 +1,4 @@
-package com.sytoss.plugindemo.bom.pyramid
+package com.sytoss.plugindemo.bom.chat.pyramid
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

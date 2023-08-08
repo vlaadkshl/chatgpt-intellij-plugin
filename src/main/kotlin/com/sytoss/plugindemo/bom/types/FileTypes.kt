@@ -1,4 +1,4 @@
-package com.sytoss.plugindemo.bom
+package com.sytoss.plugindemo.bom.types
 
 import kotlinx.serialization.Serializable
 

@@ -1,4 +1,4 @@
-package com.sytoss.plugindemo.bom.warnings
+package com.sytoss.plugindemo.bom.chat.warnings
 
 import kotlinx.serialization.Serializable
 

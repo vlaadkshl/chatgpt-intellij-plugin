@@ -5,10 +5,10 @@ import com.intellij.openapi.project.Project
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.Label
-import com.sytoss.plugindemo.bom.ClassFile
-import com.sytoss.plugindemo.bom.PyramidAnalysisResult
-import com.sytoss.plugindemo.bom.PyramidClassReport
-import com.sytoss.plugindemo.bom.PyramidReport
+import com.sytoss.plugindemo.bom.chat.ChatMessageClassData
+import com.sytoss.plugindemo.bom.chat.pyramid.result.PyramidAnalysisResult
+import com.sytoss.plugindemo.bom.chat.pyramid.result.PyramidAnalysisGroup
+import com.sytoss.plugindemo.bom.chat.pyramid.result.PyramidAnalysisContent
 import com.sytoss.plugindemo.services.PyramidChooser
 import com.theokanning.openai.completion.chat.ChatMessage
 import com.theokanning.openai.completion.chat.ChatMessageRole
@@ -20,7 +20,7 @@ import javax.swing.JPanel
 
 object PyramidCheckingService : ChatAnalysisAbstractService() {
 
-    fun analyse(selectedFiles: List<ClassFile>): PyramidAnalysisResult {
+    fun analyse(selectedFiles: List<ChatMessageClassData>): PyramidAnalysisResult {
         if (!PyramidChooser.isPyramidSelected()) {
             throw NoSuchElementException("No pyramid was found!")
         }
@@ -110,7 +110,7 @@ object PyramidCheckingService : ChatAnalysisAbstractService() {
         return decodedResponse
     }
 
-    override fun createUserMessages(selectedFiles: List<ClassFile>): List<ChatMessage> {
+    override fun createUserMessages(selectedFiles: List<ChatMessageClassData>): List<ChatMessage> {
         return selectedFiles.map {
             ChatMessage(
                 ChatMessageRole.USER.value(),
@@ -126,7 +126,7 @@ object PyramidCheckingService : ChatAnalysisAbstractService() {
         }
     }
 
-    fun buildReportUi(report: List<PyramidClassReport>, project: Project): JPanel {
+    fun buildReportUi(report: List<PyramidAnalysisGroup>, project: Project): JPanel {
         val panel = JPanel(GridBagLayout())
 
         val constraints = GridBagConstraints()
@@ -154,7 +154,7 @@ object PyramidCheckingService : ChatAnalysisAbstractService() {
                     val linePanel = JPanel()
                     linePanel.add(
                         Label(
-                            if (warning.type == PyramidReport.ReportClassType.FIELD)
+                            if (warning.type == PyramidAnalysisContent.ReportClassType.FIELD)
                                 warning.name
                             else
                                 "${warning.name}()",

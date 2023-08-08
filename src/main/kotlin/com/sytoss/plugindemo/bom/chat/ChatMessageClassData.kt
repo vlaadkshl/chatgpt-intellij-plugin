@@ -1,6 +1,6 @@
-package com.sytoss.plugindemo.bom
+package com.sytoss.plugindemo.bom.chat
 
-data class ClassFile(
+data class ChatMessageClassData(
     val fileName: String,
     val content: String,
     val type: String,

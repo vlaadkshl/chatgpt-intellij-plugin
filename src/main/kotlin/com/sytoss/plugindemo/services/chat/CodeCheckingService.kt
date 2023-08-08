@@ -5,10 +5,10 @@ import com.intellij.openapi.project.Project
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.Label
-import com.sytoss.plugindemo.bom.ClassFile
-import com.sytoss.plugindemo.bom.rules.Rule
-import com.sytoss.plugindemo.bom.warnings.ClassGroup
-import com.sytoss.plugindemo.bom.warnings.WarningsResult
+import com.sytoss.plugindemo.bom.chat.ChatMessageClassData
+import com.sytoss.plugindemo.bom.chat.checkingCode.rules.Rule
+import com.sytoss.plugindemo.bom.chat.warnings.ClassGroup
+import com.sytoss.plugindemo.bom.chat.warnings.WarningsResult
 import com.theokanning.openai.completion.chat.ChatMessage
 import com.theokanning.openai.completion.chat.ChatMessageRole
 import kotlinx.serialization.decodeFromString
@@ -19,7 +19,7 @@ import javax.swing.JPanel
 
 object CodeCheckingService : ChatAnalysisAbstractService() {
 
-    override fun createUserMessages(selectedFiles: List<ClassFile>): List<ChatMessage> {
+    override fun createUserMessages(selectedFiles: List<ChatMessageClassData>): List<ChatMessage> {
         return selectedFiles.map {
             ChatMessage(
                 ChatMessageRole.USER.value(),
@@ -33,7 +33,7 @@ object CodeCheckingService : ChatAnalysisAbstractService() {
         }
     }
 
-    fun analyse(selectedFiles: MutableList<ClassFile>, rules: List<Rule>): WarningsResult {
+    fun analyse(selectedFiles: MutableList<ChatMessageClassData>, rules: List<Rule>): WarningsResult {
         for (file in selectedFiles) {
             val applicableRules = rules.filter { it.fileTypes.contains(file.type) }
             file.rules = applicableRules.map { it.rule }
