@@ -17,8 +17,7 @@ import com.intellij.ui.dsl.builder.bind
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.layout.selected
 import com.sytoss.plugindemo.bom.ModuleChooseType
-import com.sytoss.plugindemo.converters.FileConverter
-import com.sytoss.plugindemo.services.PackageFinderService
+import com.sytoss.plugindemo.services.PackageFinder
 import com.sytoss.plugindemo.services.PyramidChooser
 import com.sytoss.plugindemo.services.chat.CodeCheckingService
 import com.sytoss.plugindemo.services.chat.PyramidCheckingService
@@ -30,8 +29,6 @@ import kotlin.concurrent.thread
 class PluginToolWindowContent(private val project: Project) {
 
     val contentPanel = OnePixelSplitter()
-
-    private val packageFinder = PackageFinderService(project)
 
     private val table = RulesTable()
 
@@ -54,13 +51,13 @@ class PluginToolWindowContent(private val project: Project) {
             row {
                 oneModuleRadio = radioButton("One module", value = ModuleChooseType.ONE_MODULE)
             }.enabled(modules.size > 1)
-        }.bind(packageFinder::moduleChooseType) { packageFinder.moduleChooseType = it }
+        }.bind(PackageFinder::moduleChooseType) { PackageFinder.moduleChooseType = it }
 
         indent {
             row("Choose Modules") {
                 val combo = comboBox(modules)
                 combo.component.addActionListener {
-                    packageFinder.module = (it.source as JComboBox<*>).selectedItem as Module
+                    PackageFinder.module = (it.source as JComboBox<*>).selectedItem as Module
                 }
                 combo.component.selectedItem = modules[0]
             }
@@ -105,19 +102,27 @@ class PluginToolWindowContent(private val project: Project) {
 
     private fun analyseErrors() {
         controlPanel.apply()
-        errorLabel.visible(false)
-        warningsPanel.removeAll()
 
-        packageFinder.findPackages()
+        warningsPanel.removeAll()
+        errorLabel.visible(false)
+
+        PackageFinder.findPackages()
+
+        if (PackageFinder.isEmpty()) {
+            MessageDialogBuilder.okCancel(
+                "Code Checking Error",
+                "This module is empty. I can't find any content, such as BOMs, DTOs, converters etc."
+            ).ask(project)
+
+            return
+        }
 
         val isContinue = MessageDialogBuilder.yesNo(
             title = "Are you sure?",
-            message = if (packageFinder.isPyramidEmpty())
-                "This module is empty. I can't find any content, such as BOMs, DTOs, converters etc."
-            else """
+            message = """
                 Here is the elements I'll send for checking:
                 
-                ${packageFinder.messageFileNames()}
+                ${PackageFinder.messageFileNames()}
             """.trimIndent()
         ).ask(project)
 
@@ -127,7 +132,7 @@ class PluginToolWindowContent(private val project: Project) {
 
         thread {
             try {
-                val fileContent = FileConverter.filesToClassFiles(packageFinder.pyramidElems)
+                val fileContent = PackageFinder.toClassFiles()
 
                 loadingLabel.visible(true)
 
@@ -159,9 +164,9 @@ class PluginToolWindowContent(private val project: Project) {
         warningsPanel.removeAll()
         PyramidChooser.clearPyramid()
 
-        packageFinder.findPackages()
+        PackageFinder.findPackages()
 
-        if (packageFinder.isPyramidEmpty()) {
+        if (PackageFinder.isEmpty()) {
             Messages.showErrorDialog(
                 "This module is empty. I can't find any content, such as BOMs, DTOs, converters etc.",
                 "Module Error"
@@ -173,7 +178,7 @@ class PluginToolWindowContent(private val project: Project) {
             try {
                 PyramidChooser.parsePyramidFromJson()
 
-                val fileContent = FileConverter.filesToClassFiles(packageFinder.pyramidElems)
+                val fileContent = PackageFinder.toClassFiles()
 
                 loadingLabel.visible(true)
 
