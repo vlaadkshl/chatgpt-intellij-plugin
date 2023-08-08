@@ -1,12 +1,10 @@
 package com.sytoss.plugindemo.ui
 
 import com.intellij.icons.AllIcons
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.DialogPanel
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
@@ -26,7 +24,6 @@ import com.sytoss.plugindemo.services.chat.PyramidCheckingService
 import com.sytoss.plugindemo.services.chat.PyramidCheckingService.pyramid
 import com.sytoss.plugindemo.services.chat.PyramidCheckingService.pyramidFile
 import com.sytoss.plugindemo.ui.components.RulesTable
-import java.awt.GridLayout
 import java.awt.event.ActionEvent
 import java.net.SocketTimeoutException
 import javax.swing.*
@@ -34,28 +31,30 @@ import kotlin.concurrent.thread
 
 class PluginToolWindowContent(private val project: Project) {
 
-    val contentPanel = JPanel(GridLayout())
+    val contentPanel = OnePixelSplitter()
 
     private val packageFinder = PackageFinderService(project)
 
     private val table = RulesTable()
 
-    private val loadingText = JLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
+    private lateinit var loadingLabel: Cell<JLabel>
 
-    private lateinit var loadingPanel: Cell<JLabel>
+    private lateinit var errorLabel: Cell<JLabel>
 
-    private var errorsPanel = JPanel()
-
-    private val splitter = OnePixelSplitter()
+    private var warningsPanel = JPanel()
 
     private lateinit var pyramidAnalysisButton: Cell<*>
 
-    private val panel: DialogPanel = panel {
+    private val controlPanel = panel {
         group {
             lateinit var oneModuleRadio: Cell<JBRadioButton>
             buttonsGroup(title = "Module Mode", indent = false) {
-                row { radioButton("All modules", value = ModuleChooseType.ALL_MODULES) }
-                row { oneModuleRadio = radioButton("One module", value = ModuleChooseType.ONE_MODULE) }
+                row {
+                    radioButton("All modules", value = ModuleChooseType.ALL_MODULES)
+                }
+                row {
+                    oneModuleRadio = radioButton("One module", value = ModuleChooseType.ONE_MODULE)
+                }
             }.bind(packageFinder::moduleChooseType) { packageFinder.moduleChooseType = it }
 
             indent {
@@ -89,21 +88,25 @@ class PluginToolWindowContent(private val project: Project) {
     }
 
     init {
-        splitter.firstComponent = JBScrollPane(panel)
-        splitter.secondComponent = JBScrollPane(panel {
+        contentPanel.firstComponent = JBScrollPane(controlPanel)
+        contentPanel.secondComponent = JBScrollPane(panel {
             panel {
                 row {
-                    loadingPanel = cell(loadingText).visible(false)
+                    loadingLabel = cell(
+                        JLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
+                    ).visible(false)
+
+                    errorLabel = cell(
+                        JLabel("", AllIcons.General.BalloonError, SwingConstants.LEFT)
+                    ).visible(false)
                 }
             }
             panel {
                 row {
-                    cell(errorsPanel)
+                    cell(warningsPanel)
                 }
             }
         })
-
-        contentPanel.add(splitter)
     }
 
     private fun selectModule(event: ActionEvent) {
@@ -112,13 +115,17 @@ class PluginToolWindowContent(private val project: Project) {
     }
 
     private fun analyseErrors() {
-        panel.apply()
-        errorsPanel.removeAll()
+        controlPanel.apply()
+        errorLabel.visible(false)
+        warningsPanel.removeAll()
 
         packageFinder.findPackages()
 
         if (packageFinder.isPyramidEmpty()) {
-            Messages.showErrorDialog("This module is empty. I can't find any content, such as BOMs, DTOs, converters etc.", "Module Error")
+            Messages.showErrorDialog(
+                "This module is empty. I can't find any content, such as BOMs, DTOs, converters etc.",
+                "Module Error"
+            )
             return
         }
 
@@ -126,7 +133,7 @@ class PluginToolWindowContent(private val project: Project) {
             try {
                 val fileContent = FileConverter.filesToClassFiles(packageFinder.pyramidElems)
 
-                loadingPanel.visible(true)
+                loadingLabel.visible(true)
 
                 val report = CodeCheckingService.analyse(
                     fileContent,
@@ -134,32 +141,38 @@ class PluginToolWindowContent(private val project: Project) {
                 ).result
 
                 DumbService.getInstance(project).smartInvokeLater {
-                    loadingPanel.visible(false)
-
                     val reportPanel = CodeCheckingService.buildReportUi(report, project)
-                    errorsPanel.add(reportPanel)
+                    warningsPanel.add(reportPanel)
                 }
             } catch (e: Exception) {
-                loadingText.icon = AllIcons.General.BalloonError
                 if (e is SocketTimeoutException) {
-                    loadingText.text = "Oops... We have a timeout error.\nPlease, try again!"
+                    errorLabel.component.text = "Oops... We have a timeout error.\nPlease, try again!"
                 } else {
-                    loadingText.text = "Error: ${e.message}"
+                    errorLabel.component.text = "Error: ${e.message}"
                 }
+                errorLabel.visible(true)
+            } finally {
+                loadingLabel.visible(false)
             }
         }
     }
 
     private fun analysePyramid() {
+        controlPanel.apply()
+        errorLabel.visible(false)
+        warningsPanel.removeAll()
+
         if (pyramidFile == null) {
             Messages.showErrorDialog("First select the \"pyramid.json\" file!", "Error: Analysing Pyramid")
         }
 
-        panel.apply()
         packageFinder.findPackages()
 
         if (packageFinder.isPyramidEmpty()) {
-            Messages.showErrorDialog("This module is empty. I can't find any content, such as BOMs, DTOs, converters etc.", "Module Error")
+            Messages.showErrorDialog(
+                "This module is empty. I can't find any content, such as BOMs, DTOs, converters etc.",
+                "Module Error"
+            )
             return
         }
 
@@ -169,23 +182,23 @@ class PluginToolWindowContent(private val project: Project) {
 
                 val fileContent = FileConverter.filesToClassFiles(packageFinder.pyramidElems)
 
-                loadingPanel.visible(true)
+                loadingLabel.visible(true)
 
                 val report = PyramidCheckingService.analyse(fileContent).result
 
                 DumbService.getInstance(project).smartInvokeLater {
-                    loadingPanel.visible(false)
+                    loadingLabel.visible(false)
 
                     val reportPanel = PyramidCheckingService.buildReportUi(report, project)
-                    errorsPanel.add(reportPanel)
+                    warningsPanel.add(reportPanel)
                 }
             } catch (e: Exception) {
-                loadingText.icon = AllIcons.General.BalloonError
                 if (e is SocketTimeoutException) {
-                    loadingText.text = "Oops... We have a timeout error.\nPlease, try again!"
+                    errorLabel.component.text = "Oops... We have a timeout error.\nPlease, try again!"
                 } else {
-                    loadingText.text = "Error: ${e.message}"
+                    errorLabel.component.text = "Error: ${e.message}"
                 }
+                errorLabel.visible(true)
             }
         }
     }
