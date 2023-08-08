@@ -18,13 +18,10 @@ import com.intellij.ui.layout.selected
 import com.sytoss.plugindemo.bom.ModuleChooseType
 import com.sytoss.plugindemo.converters.FileConverter
 import com.sytoss.plugindemo.services.PackageFinderService
-import com.sytoss.plugindemo.services.PyramidService
+import com.sytoss.plugindemo.services.PyramidChooser
 import com.sytoss.plugindemo.services.chat.CodeCheckingService
 import com.sytoss.plugindemo.services.chat.PyramidCheckingService
-import com.sytoss.plugindemo.services.chat.PyramidCheckingService.pyramid
-import com.sytoss.plugindemo.services.chat.PyramidCheckingService.pyramidFile
 import com.sytoss.plugindemo.ui.components.RulesTable
-import java.awt.event.ActionEvent
 import java.net.SocketTimeoutException
 import javax.swing.*
 import kotlin.concurrent.thread
@@ -76,10 +73,8 @@ class PluginToolWindowContent(private val project: Project) {
         row("Pyramid Matching Feature") {
             button("Select Pyramid JSON") {
                 DumbService.getInstance(project).smartInvokeLater {
-                    pyramidFile = PyramidService.selectPyramid(it.source as JButton, project)
-                    if (pyramidFile != null) {
-                        pyramidAnalysisButton.enabled(true)
-                    }
+                    PyramidChooser.selectFile(it.source as JButton, project)
+                    pyramidAnalysisButton.enabled(PyramidChooser.isFileSelected())
                 }
             }
             pyramidAnalysisButton = button("Pyramid Matching Analysis") {
@@ -154,10 +149,7 @@ class PluginToolWindowContent(private val project: Project) {
         controlPanel.apply()
         errorLabel.visible(false)
         warningsPanel.removeAll()
-
-        if (pyramidFile == null) {
-            Messages.showErrorDialog("First select the \"pyramid.json\" file!", "Error: Analysing Pyramid")
-        }
+        PyramidChooser.clearPyramid()
 
         packageFinder.findPackages()
 
@@ -171,7 +163,7 @@ class PluginToolWindowContent(private val project: Project) {
 
         thread {
             try {
-                pyramid = PyramidService.parseJson(pyramidFile!!)
+                PyramidChooser.parsePyramidFromJson()
 
                 val fileContent = FileConverter.filesToClassFiles(packageFinder.pyramidElems)
 

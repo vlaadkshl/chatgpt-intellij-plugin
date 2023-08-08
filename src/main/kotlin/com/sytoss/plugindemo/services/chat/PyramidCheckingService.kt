@@ -2,7 +2,6 @@ package com.sytoss.plugindemo.services.chat
 
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.Label
@@ -10,7 +9,7 @@ import com.sytoss.plugindemo.bom.ClassFile
 import com.sytoss.plugindemo.bom.PyramidAnalysisResult
 import com.sytoss.plugindemo.bom.PyramidClassReport
 import com.sytoss.plugindemo.bom.PyramidReport
-import com.sytoss.plugindemo.bom.pyramid.Pyramid
+import com.sytoss.plugindemo.services.PyramidChooser
 import com.theokanning.openai.completion.chat.ChatMessage
 import com.theokanning.openai.completion.chat.ChatMessageRole
 import kotlinx.serialization.decodeFromString
@@ -21,13 +20,9 @@ import javax.swing.JPanel
 
 object PyramidCheckingService : ChatAnalysisAbstractService() {
 
-    var pyramidFile: VirtualFile? = null
-
-    var pyramid: Pyramid? = null
-
     fun analyse(selectedFiles: List<ClassFile>): PyramidAnalysisResult {
-        if (pyramid == null) {
-            throw IllegalStateException("No pyramid was found!")
+        if (!PyramidChooser.isPyramidSelected()) {
+            throw NoSuchElementException("No pyramid was found!")
         }
 
         val systemMessages = mutableListOf(

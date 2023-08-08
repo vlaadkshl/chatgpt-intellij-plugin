@@ -11,28 +11,40 @@ import kotlinx.serialization.json.Json
 import java.nio.file.Files
 import javax.swing.JButton
 
-object PyramidService {
-    fun selectPyramid(sourceButton: JButton, project: Project): VirtualFile? {
-        var returnFile: VirtualFile? = null
+object PyramidChooser {
 
+    private var pyramidFile: VirtualFile? = null
+
+    private var pyramid: Pyramid? = null
+
+    fun isFileSelected() = pyramidFile != null
+
+    fun isPyramidSelected() = pyramid != null
+
+    fun clearPyramid() {
+        pyramidFile = null
+    }
+
+    fun selectFile(sourceButton: JButton, project: Project) {
         FileChooser.chooseFile(
             FileChooserDescriptorFactory.createSingleFileDescriptor("json"), project, null
         ) { file ->
             run {
                 sourceButton.text = "Select Pyramid: ${file.name}"
-                returnFile = file
+                pyramidFile = file
             }
         }
-
-        return returnFile
     }
 
-    fun parseJson(file: VirtualFile): Pyramid? {
+    fun parsePyramidFromJson() {
         try {
-            return Json.decodeFromString<Pyramid>(Files.readString(file.toNioPath()))
+            if (isFileSelected()) {
+                pyramid = Json.decodeFromString<Pyramid>(Files.readString(pyramidFile?.toNioPath()))
+            } else {
+                Messages.showErrorDialog("First select the \"pyramid.json\" file!", "Error: Analysing Pyramid")
+            }
         } catch (e: Exception) {
             Messages.showErrorDialog(e.stackTraceToString(), "Error: Parsing JSON")
         }
-        return null
     }
 }
