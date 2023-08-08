@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.sytoss.plugin-demo</id>
 
-    <name>Demo</name>
+    <name>Sytoss AI Helper</name>
     <vendor/>
 
     <depends>com.intellij.modules.platform</depends>
@@ -9,7 +9,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow factoryClass="com.sytoss.plugindemo.ui.PluginToolWindowFactory"
-                    id="My Plugin"
+                    id="Sytoss AI Helper"
                     secondary="true"
                     icon="AllIcons.Toolwindows.NoEvents"
                     anchor="bottom"
