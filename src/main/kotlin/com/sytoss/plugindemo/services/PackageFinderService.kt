@@ -18,7 +18,7 @@ class PackageFinderService(
     var module: Module = ModuleManager.getInstance(project).modules[0]
 ) {
 
-    var moduleChooseType = ModuleChooseType.ONE_MODULE
+    var moduleChooseType = ModuleChooseType.ALL_MODULES
 
     private var fileTypes = JsonService.fromJsonResourceFile<FileTypes>("/fileTypes.json").fileTypes
 

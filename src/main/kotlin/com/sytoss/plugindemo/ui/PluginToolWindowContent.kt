@@ -46,6 +46,8 @@ class PluginToolWindowContent(private val project: Project) {
     private lateinit var pyramidAnalysisButton: Cell<*>
 
     private val controlPanel = panel {
+        val modules = ModuleManager.getInstance(project).modules.asList()
+
         lateinit var oneModuleRadio: Cell<JBRadioButton>
         buttonsGroup(title = "Module Mode", indent = false) {
             row {
@@ -53,13 +55,11 @@ class PluginToolWindowContent(private val project: Project) {
             }
             row {
                 oneModuleRadio = radioButton("One module", value = ModuleChooseType.ONE_MODULE)
-            }
+            }.enabled(modules.size > 1)
         }.bind(packageFinder::moduleChooseType) { packageFinder.moduleChooseType = it }
 
         indent {
             row("Choose Modules") {
-                val modules = ModuleManager.getInstance(project).modules.asList()
-
                 val combo = comboBox(modules)
                 combo.component.addActionListener { selectModule(it) }
 
