@@ -76,7 +76,7 @@ class PluginToolWindowContent(private val project: Project) {
 
         row("Pyramid Matching Feature") {
             button("Select Pyramid JSON") {
-                ApplicationManager.getApplication().invokeLater {
+                DumbService.getInstance(project).smartInvokeLater {
                     pyramidFile = PyramidService.selectPyramid(it.source as JButton, project)
                     pyramidAnalysisButton.enabled(true)
                 }
