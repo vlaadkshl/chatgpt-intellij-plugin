@@ -4,7 +4,6 @@ import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ModuleRootManager
-import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiManager
@@ -85,20 +84,25 @@ class PackageFinderService(
         }
 
         setFilesToPyramid()
-        messageFileNames()
     }
 
-    private fun messageFileNames() {
+    fun messageFileNames(): String {
         val msgBuilder = StringBuilder()
 
         for ((name, value) in pyramidElems) {
             if (value.folders.isNotEmpty()) {
-                msgBuilder.append("TYPE: ${name.uppercase()}\n")
-                msgBuilder.append(value.files.map { file -> file.name }.toString()).append("\n\n")
+                msgBuilder.append(
+                    """
+                        TYPE: ${name.uppercase()}
+                        ${value.files.joinToString(transform = { it.name })}
+                        
+                        
+                    """.trimIndent()
+                )
             }
         }
 
-        Messages.showMessageDialog(msgBuilder.toString(), "", Messages.getInformationIcon())
+        return msgBuilder.toString()
     }
 
     private fun setFilesToPyramid() {

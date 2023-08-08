@@ -5,6 +5,7 @@ import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.MessageDialogBuilder
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
@@ -109,11 +110,18 @@ class PluginToolWindowContent(private val project: Project) {
 
         packageFinder.findPackages()
 
-        if (packageFinder.isPyramidEmpty()) {
-            Messages.showErrorDialog(
-                "This module is empty. I can't find any content, such as BOMs, DTOs, converters etc.",
-                "Module Error"
-            )
+        val isContinue = MessageDialogBuilder.yesNo(
+            title = "Are you sure?",
+            message = if (packageFinder.isPyramidEmpty())
+                "This module is empty. I can't find any content, such as BOMs, DTOs, converters etc."
+            else """
+                Here is the elements I'll send for checking:
+                
+                ${packageFinder.messageFileNames()}
+            """.trimIndent()
+        ).ask(project)
+
+        if (!isContinue) {
             return
         }
 
