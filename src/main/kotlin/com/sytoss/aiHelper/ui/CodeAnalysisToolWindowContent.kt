@@ -25,7 +25,7 @@ import java.net.SocketTimeoutException
 import javax.swing.*
 import kotlin.concurrent.thread
 
-class PluginToolWindowContent(private val project: Project) {
+class CodeAnalysisToolWindowContent(private val project: Project) {
 
     val contentPanel = OnePixelSplitter()
 
