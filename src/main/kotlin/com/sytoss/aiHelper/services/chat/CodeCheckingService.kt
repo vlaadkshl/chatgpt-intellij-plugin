@@ -13,7 +13,6 @@ import com.theokanning.openai.completion.chat.ChatMessage
 import com.theokanning.openai.completion.chat.ChatMessageRole
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import javax.swing.JPanel
 
@@ -81,11 +80,6 @@ object CodeCheckingService : ChatAnalysisAbstractService() {
 
     fun buildReportUi(report: List<ClassGroup>, project: Project): JPanel {
         val panel = JPanel(GridBagLayout())
-
-        val constraints = GridBagConstraints()
-        constraints.gridx = 0
-        constraints.gridy = GridBagConstraints.RELATIVE
-        constraints.anchor = GridBagConstraints.WEST
 
         if (report.isEmpty()) {
             panel.add(Label("No errors were found."), constraints)

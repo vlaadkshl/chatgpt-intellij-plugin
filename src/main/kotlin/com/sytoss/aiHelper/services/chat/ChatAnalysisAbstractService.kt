@@ -6,6 +6,7 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
 import com.sytoss.aiHelper.bom.chat.ChatMessageClassData
 import com.sytoss.aiHelper.bom.chat.warnings.ClassGroupTemplate
+import com.sytoss.aiHelper.ui.components.DefaultConstraints
 import com.theokanning.openai.client.OpenAiApi
 import com.theokanning.openai.completion.chat.ChatCompletionRequest
 import com.theokanning.openai.completion.chat.ChatMessage
@@ -15,6 +16,8 @@ import java.time.Duration
 abstract class ChatAnalysisAbstractService {
 
     private val openAiApi: OpenAiApi
+
+    val constraints = DefaultConstraints.topLeftColumn
 
     init {
         val key = javaClass.getResource("/key")?.readText()
