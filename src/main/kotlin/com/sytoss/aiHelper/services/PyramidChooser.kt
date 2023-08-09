@@ -3,12 +3,12 @@ package com.sytoss.aiHelper.services
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import com.sytoss.aiHelper.bom.chat.pyramid.Pyramid
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import javax.swing.JButton
 
 object PyramidChooser {
@@ -37,14 +37,10 @@ object PyramidChooser {
     }
 
     fun parsePyramidFromJson() {
-        try {
-            if (isFileSelected()) {
-                pyramid = Json.decodeFromString<Pyramid>(Files.readString(pyramidFile?.toNioPath()))
-            } else {
-                Messages.showErrorDialog("First select the \"pyramid.json\" file!", "Error: Analysing Pyramid")
-            }
-        } catch (e: Exception) {
-            Messages.showErrorDialog(e.stackTraceToString(), "Error: Parsing JSON")
+        if (isFileSelected()) {
+            pyramid = Json.decodeFromString<Pyramid>(Files.readString(pyramidFile?.toNioPath()))
+        } else {
+            throw NoSuchFileException("First select the \"pyramid.json\" file!")
         }
     }
 }

@@ -6,7 +6,6 @@ import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.MessageDialogBuilder
-import com.intellij.openapi.ui.Messages
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBRadioButton
@@ -100,12 +99,16 @@ class PluginToolWindowContent(private val project: Project) {
         })
     }
 
-    private fun analyseErrors() {
+    private fun preparePanel(additionalAction: (() -> Unit)? = null) {
         controlPanel.apply()
 
         warningsPanel.removeAll()
         errorLabel.visible(false)
 
+        if (additionalAction != null) additionalAction()
+    }
+
+    private fun findPackagesAndAsk(): Boolean {
         PackageFinder.findPackages()
 
         if (PackageFinder.isEmpty()) {
@@ -114,10 +117,10 @@ class PluginToolWindowContent(private val project: Project) {
                 "This module is empty. I can't find any content, such as BOMs, DTOs, converters etc."
             ).ask(project)
 
-            return
+            return false
         }
 
-        val isContinue = MessageDialogBuilder.yesNo(
+        return MessageDialogBuilder.yesNo(
             title = "Are you sure?",
             message = """
                 Here is the elements I'll send for checking:
@@ -125,7 +128,12 @@ class PluginToolWindowContent(private val project: Project) {
                 ${PackageFinder.messageFileNames()}
             """.trimIndent()
         ).ask(project)
+    }
 
+    private fun analyseErrors() {
+        preparePanel()
+
+        val isContinue = findPackagesAndAsk()
         if (!isContinue) {
             return
         }
@@ -146,10 +154,11 @@ class PluginToolWindowContent(private val project: Project) {
                     warningsPanel.add(reportPanel)
                 }
             } catch (e: Exception) {
-                if (e is SocketTimeoutException) {
-                    errorLabel.component.text = "Oops... We have a timeout error.\nPlease, try again!"
-                } else {
-                    errorLabel.component.text = "Error: ${e.message}"
+                when (e) {
+                    is SocketTimeoutException ->
+                        errorLabel.component.text = "Oops... We have a timeout error.\nPlease, try again!"
+
+                    else -> errorLabel.component.text = "Error: ${e.message}"
                 }
                 errorLabel.visible(true)
             } finally {
@@ -159,18 +168,10 @@ class PluginToolWindowContent(private val project: Project) {
     }
 
     private fun analysePyramid() {
-        controlPanel.apply()
-        errorLabel.visible(false)
-        warningsPanel.removeAll()
-        PyramidChooser.clearPyramid()
+        preparePanel { PyramidChooser.clearPyramid() }
 
-        PackageFinder.findPackages()
-
-        if (PackageFinder.isEmpty()) {
-            Messages.showErrorDialog(
-                "This module is empty. I can't find any content, such as BOMs, DTOs, converters etc.",
-                "Module Error"
-            )
+        val isContinue = findPackagesAndAsk()
+        if (!isContinue) {
             return
         }
 
@@ -185,18 +186,29 @@ class PluginToolWindowContent(private val project: Project) {
                 val report = PyramidCheckingService.analyse(fileContent).result
 
                 DumbService.getInstance(project).smartInvokeLater {
-                    loadingLabel.visible(false)
-
                     val reportPanel = PyramidCheckingService.buildReportUi(report, project)
                     warningsPanel.add(reportPanel)
                 }
             } catch (e: Exception) {
-                if (e is SocketTimeoutException) {
-                    errorLabel.component.text = "Oops... We have a timeout error.\nPlease, try again!"
-                } else {
-                    errorLabel.component.text = "Error: ${e.message}"
+                when (e) {
+                    is NoSuchFileException -> DumbService.getInstance(project).smartInvokeLater {
+                        MessageDialogBuilder.yesNo(
+                            title = "Pyramid Processing Error",
+                            message = """
+                                Error is occured while processing the pyramid:
+                                ${e.message}
+                            """.trimIndent()
+                        ).ask(project)
+                    }
+
+                    is SocketTimeoutException ->
+                        errorLabel.component.text = "Oops... We have a timeout error.\nPlease, try again!"
+
+                    else -> errorLabel.component.text = "Error: ${e.message}"
                 }
                 errorLabel.visible(true)
+            } finally {
+                loadingLabel.visible(false)
             }
         }
     }
