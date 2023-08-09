@@ -1,20 +1,18 @@
 <idea-plugin>
     <id>com.sytoss.plugin-demo</id>
 
-    <name>Demo</name>
+    <name>Sytoss AI Helper</name>
     <vendor/>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.java</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.sytoss.plugindemo.ui.PluginToolWindowFactory"
-                    id="My Plugin"
+        <toolWindow factoryClass="com.sytoss.aiHelper.ui.PluginToolWindowFactory"
+                    id="Sytoss AI Helper"
                     secondary="true"
                     icon="AllIcons.Toolwindows.NoEvents"
                     anchor="bottom"
         />
-        <!--        <localInspection implementationClass="com.sytoss.plugindemo.services.ProblemChecker"-->
-        <!--                         displayName="My inspection" enabledByDefault="true"/>-->
     </extensions>
 </idea-plugin>

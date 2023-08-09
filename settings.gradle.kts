@@ -5,4 +5,4 @@ pluginManagement {
     }
 }
 
-rootProject.name = "plugin-demo"
+rootProject.name = "ai-helper"
