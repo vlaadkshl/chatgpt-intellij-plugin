@@ -15,12 +15,15 @@ import com.intellij.ui.dsl.builder.Cell
 import com.intellij.ui.dsl.builder.bind
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.layout.selected
+import com.intellij.util.ui.JBUI
 import com.sytoss.aiHelper.bom.ModuleChooseType
 import com.sytoss.aiHelper.services.PackageFinder
 import com.sytoss.aiHelper.services.PyramidChooser
 import com.sytoss.aiHelper.services.chat.CodeCheckingService
 import com.sytoss.aiHelper.services.chat.PyramidCheckingService
 import com.sytoss.aiHelper.ui.components.RulesTable
+import java.awt.FlowLayout
+import java.awt.Insets
 import java.net.SocketTimeoutException
 import javax.swing.*
 import kotlin.concurrent.thread
@@ -81,21 +84,34 @@ class CodeAnalysisToolWindowContent(private val project: Project) {
     }
 
     init {
-        contentPanel.firstComponent = JBScrollPane(controlPanel)
-        contentPanel.secondComponent = JBScrollPane(panel {
-            row {
-                loadingLabel = cell(
-                    JLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
-                ).visible(false)
+        contentPanel.firstComponent = JBScrollPane(object : JPanel(FlowLayout(FlowLayout.LEFT)) {
+            init {
+                add(controlPanel)
             }
-            row {
-                errorLabel = cell(
-                    JLabel("", AllIcons.General.BalloonError, SwingConstants.LEFT)
-                ).visible(false)
+
+            override fun getInsets(): Insets = JBUI.insets(10)
+        })
+
+        contentPanel.secondComponent = JBScrollPane(object : JPanel(FlowLayout(FlowLayout.LEFT)) {
+            init {
+                add(panel {
+                    row {
+                        loadingLabel = cell(
+                            JLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
+                        ).visible(false)
+                    }
+                    row {
+                        errorLabel = cell(
+                            JLabel("", AllIcons.General.BalloonError, SwingConstants.LEFT)
+                        ).visible(false)
+                    }
+                    row {
+                        cell(warningsPanel)
+                    }
+                })
             }
-            row {
-                cell(warningsPanel)
-            }
+
+            override fun getInsets(): Insets = JBUI.insets(10)
         })
     }
 
