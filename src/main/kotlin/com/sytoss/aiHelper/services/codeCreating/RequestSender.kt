@@ -17,7 +17,6 @@ object RequestSender {
 
     fun sendRequest(request: CreateRequest): CreateResponse? {
         val reqString = Json.encodeToString(request)
-        println(reqString)
 
         val httpClient = HttpClient.newHttpClient()
         val httpRequest = HttpRequest
