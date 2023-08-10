@@ -7,9 +7,10 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 import java.awt.FlowLayout
+import java.awt.Label
 import javax.swing.JPanel
 
-class FileChooserWithLabel(chooserLabel: String, project: Project) : JPanel(FlowLayout(FlowLayout.LEFT)) {
+class FileChooserCreateComponent(text: String, project: Project) : JPanel(FlowLayout(FlowLayout.LEFT)) {
     val selectedFiles = mutableListOf<VirtualFile>()
 
     private val showButton = JButtonWithListener("Show Selected", AllIcons.Actions.ToggleVisibility) {
@@ -21,7 +22,7 @@ class FileChooserWithLabel(chooserLabel: String, project: Project) : JPanel(Flow
         changeButtonsStateToAppropriate()
     }
 
-    private val chooser = JButtonWithListener(chooserLabel) {
+    private val chooser = JButtonWithListener("Select Files") {
         FileChooser.chooseFiles(
             FileChooserDescriptorFactory.createMultipleFilesNoJarsDescriptor(),
             project,
@@ -42,6 +43,7 @@ class FileChooserWithLabel(chooserLabel: String, project: Project) : JPanel(Flow
     init {
         changeButtonsStateToAppropriate()
 
+        add(Label(text))
         add(chooser)
         add(showButton)
         add(removeButton)

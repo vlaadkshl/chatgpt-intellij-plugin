@@ -3,7 +3,7 @@ package com.sytoss.aiHelper.ui
 import com.intellij.openapi.project.Project
 import com.sytoss.aiHelper.services.PumlDiagramChooser
 import com.sytoss.aiHelper.ui.components.DefaultConstraints
-import com.sytoss.aiHelper.ui.components.FileChooserWithLabel
+import com.sytoss.aiHelper.ui.components.FileChooserCreateComponent
 import com.sytoss.aiHelper.ui.components.JButtonWithListener
 import com.sytoss.aiHelper.ui.components.ScrollWithInsets
 import java.awt.GridBagLayout
@@ -21,7 +21,7 @@ class CodeCreatingToolWindowContent(private val project: Project) {
         PumlDiagramChooser.selectFile(it.source as JButton, project)
     }
 
-    private val bomChooser = FileChooserWithLabel("Choose BOM Files", project)
+    private val bomChooser = FileChooserCreateComponent("Choose BOM Files", project)
 
     init {
         addWithConstraints(pumlChooserBtn)
