@@ -12,7 +12,9 @@ object PumlDiagramChooser {
 
     fun selectFile(sourceButton: JButton, project: Project) {
         FileChooser.chooseFile(
-            FileChooserDescriptorFactory.createSingleFileDescriptor("puml"), project, null
+            FileChooserDescriptorFactory.createSingleFileDescriptor("puml"),
+            project,
+            null
         ) { file ->
             run {
                 sourceButton.text = "Choose PlantUML file: ${file.name}"
