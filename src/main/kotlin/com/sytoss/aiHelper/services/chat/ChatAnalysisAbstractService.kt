@@ -36,7 +36,7 @@ abstract class ChatAnalysisAbstractService {
         return response?.choices?.get(0)?.message?.content ?: throw RuntimeException("Can't get response")
     }
 
-    protected fun getClassVirtualFile(warningClass: ClassGroupTemplate, project: Project): VirtualFile? {
+    fun getClassVirtualFile(warningClass: ClassGroupTemplate, project: Project): VirtualFile? {
         val qualifiedName = warningClass.className
         val psiClass = JavaPsiFacade.getInstance(project).findClass(
             qualifiedName,

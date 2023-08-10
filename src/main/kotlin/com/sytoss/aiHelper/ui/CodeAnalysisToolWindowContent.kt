@@ -17,6 +17,7 @@ import com.intellij.ui.layout.selected
 import com.sytoss.aiHelper.bom.ModuleChooseType
 import com.sytoss.aiHelper.services.PackageFinder
 import com.sytoss.aiHelper.services.PyramidChooser
+import com.sytoss.aiHelper.services.UiBuilder
 import com.sytoss.aiHelper.services.chat.CodeCheckingService
 import com.sytoss.aiHelper.services.chat.PyramidCheckingService
 import com.sytoss.aiHelper.ui.components.RulesTable
@@ -152,7 +153,7 @@ class CodeAnalysisToolWindowContent(private val project: Project) {
                 ).result
 
                 DumbService.getInstance(project).smartInvokeLater {
-                    val reportPanel = CodeCheckingService.buildReportUi(report, project)
+                    val reportPanel = UiBuilder.buildCheckingReportPanel(report, project)
                     warningsPanel.add(reportPanel)
                 }
             } catch (e: Exception) {
@@ -188,7 +189,7 @@ class CodeAnalysisToolWindowContent(private val project: Project) {
                 val report = PyramidCheckingService.analyse(fileContent).result
 
                 DumbService.getInstance(project).smartInvokeLater {
-                    val reportPanel = PyramidCheckingService.buildReportUi(report, project)
+                    val reportPanel = UiBuilder.buildPyramidReportPanel(report, project)
                     warningsPanel.add(reportPanel)
                 }
             } catch (e: Exception) {

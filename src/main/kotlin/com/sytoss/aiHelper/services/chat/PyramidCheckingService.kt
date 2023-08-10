@@ -1,21 +1,12 @@
 package com.sytoss.aiHelper.services.chat
 
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.project.Project
-import com.intellij.ui.components.ActionLink
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.Label
 import com.sytoss.aiHelper.bom.chat.ChatMessageClassData
-import com.sytoss.aiHelper.bom.chat.pyramid.result.PyramidAnalysisContent
-import com.sytoss.aiHelper.bom.chat.pyramid.result.PyramidAnalysisGroup
 import com.sytoss.aiHelper.bom.chat.pyramid.result.PyramidAnalysisResult
 import com.sytoss.aiHelper.services.PyramidChooser
 import com.theokanning.openai.completion.chat.ChatMessage
 import com.theokanning.openai.completion.chat.ChatMessageRole
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import java.awt.GridBagLayout
-import javax.swing.JPanel
 
 object PyramidCheckingService : ChatAnalysisAbstractService() {
 
@@ -123,49 +114,5 @@ object PyramidCheckingService : ChatAnalysisAbstractService() {
                 """.trimIndent()
             )
         }
-    }
-
-    fun buildReportUi(report: List<PyramidAnalysisGroup>, project: Project): JPanel {
-        val panel = JPanel(GridBagLayout())
-
-        if (report.isEmpty()) {
-            panel.add(Label("No errors were found."), constraints)
-        } else {
-            for (classGroup in report) {
-                val classPanel = JPanel(GridBagLayout())
-
-                val file = getClassVirtualFile(classGroup, project)
-
-                if (file != null) {
-                    classPanel.add(ActionLink(classGroup.className) {
-                        FileEditorManager.getInstance(project).openFile(file, true)
-                    }, constraints)
-                } else {
-                    classPanel.add(JBLabel("${classGroup.className} (NO LINK)"), constraints)
-                }
-
-                for (warning in classGroup.report) {
-                    val linePanel = JPanel()
-                    linePanel.add(
-                        Label(
-                            if (warning.type == PyramidAnalysisContent.ReportClassType.FIELD)
-                                warning.name
-                            else
-                                "${warning.name}()",
-                            null,
-                            null,
-                            true
-                        )
-                    )
-                    linePanel.add(Label(warning.warning))
-
-                    classPanel.add(linePanel, constraints)
-                }
-
-                panel.add(classPanel, constraints)
-            }
-        }
-
-        return panel
     }
 }
