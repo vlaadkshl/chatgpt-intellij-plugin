@@ -1,7 +1,10 @@
 package com.sytoss.aiHelper.ui
 
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
+import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
+import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.services.PumlDiagramChooser
 import com.sytoss.aiHelper.services.UiBuilder
 import com.sytoss.aiHelper.services.codeCreating.BomFromPumlCreator
@@ -10,9 +13,8 @@ import com.sytoss.aiHelper.ui.components.FileChooserCreateComponent
 import com.sytoss.aiHelper.ui.components.JButtonWithListener
 import com.sytoss.aiHelper.ui.components.ScrollWithInsets
 import java.awt.GridBagLayout
-import javax.swing.JButton
-import javax.swing.JComponent
-import javax.swing.JPanel
+import javax.swing.*
+import kotlin.concurrent.thread
 
 class CodeCreatingToolWindowContent(private val project: Project) {
 
@@ -22,15 +24,27 @@ class CodeCreatingToolWindowContent(private val project: Project) {
 
     private val elementsPanel = JPanel(GridBagLayout())
 
+    private val loadingLabel = JLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
+
     private val pumlChooserBtn = JButtonWithListener("Choose PlantUML file") {
         PumlDiagramChooser.selectFile(it.source as JButton, project)
         createBomBtn.isEnabled = PumlDiagramChooser.isFileSelected()
     }
 
     private val createBomBtn = JButtonWithListener("Create BOM") {
-        val bomClasses = BomFromPumlCreator.createBom()
-        if (bomClasses != null) {
-            UiBuilder.buildCreateClassesPanel(bomClasses, elementsPanel, project)
+        loadingLabel.isVisible = true
+        thread {
+            var bomClasses: CreateResponse? = null
+            try {
+                bomClasses = BomFromPumlCreator.createBom()
+            } finally {
+                DumbService.getInstance(project).smartInvokeLater {
+                    loadingLabel.isVisible = false
+                    if (bomClasses != null) {
+                        UiBuilder.buildCreateClassesPanel(bomClasses, elementsPanel, project)
+                    }
+                }
+            }
         }
     }
 
@@ -44,6 +58,8 @@ class CodeCreatingToolWindowContent(private val project: Project) {
         addWithConstraints(createBomBtn)
         addWithConstraints(bomChooser)
 
+        elementsPanel.add(loadingLabel)
+        loadingLabel.isVisible = false
         contentPanel.secondComponent = ScrollWithInsets { elementsPanel }
     }
 
