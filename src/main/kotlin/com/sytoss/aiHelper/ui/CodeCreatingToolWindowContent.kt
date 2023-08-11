@@ -4,15 +4,15 @@ import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
+import com.intellij.ui.components.JBCheckBox
+import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.services.UiBuilder
 import com.sytoss.aiHelper.services.codeCreating.BomFromPumlCreator
-import com.sytoss.aiHelper.ui.components.DefaultConstraints
-import com.sytoss.aiHelper.ui.components.FileChooserCreateComponent
-import com.sytoss.aiHelper.ui.components.JButtonWithListener
-import com.sytoss.aiHelper.ui.components.ScrollWithInsets
+import com.sytoss.aiHelper.ui.components.*
 import java.awt.FlowLayout
+import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import javax.swing.JComponent
 import javax.swing.JLabel
@@ -49,10 +49,47 @@ class CodeCreatingToolWindowContent(private val project: Project) {
         }
     }
 
+    private var isBomCheckBoxSelected = false
+    private var isDtoCheckBoxSelected = false
+
+    private val converterCheckBox = JBCheckBoxWithListener("Converter") {}
+
+    private val bomCheckBox = JBCheckBoxWithListener("BOM") {
+        val source = it.source as JBCheckBox
+        isBomCheckBoxSelected = source.isSelected
+        converterCheckBox.isSelected = isBomCheckBoxSelected && isDtoCheckBoxSelected
+        converterCheckBox.isEnabled = isBomCheckBoxSelected && isDtoCheckBoxSelected
+    }
+
+    private val dtoCheckBox = JBCheckBoxWithListener("DTO") {
+        val source = it.source as JBCheckBox
+        isDtoCheckBoxSelected = source.isSelected
+        converterCheckBox.isSelected = isBomCheckBoxSelected && isDtoCheckBoxSelected
+        converterCheckBox.isEnabled = isBomCheckBoxSelected && isDtoCheckBoxSelected
+    }
+
     init {
+        converterCheckBox.isEnabled = false
+
         val mainBorderLayout = BorderLayoutPanel()
 
         addWithConstraints(pumlChooser)
+        val checkboxGroup = JPanel(GridBagLayout())
+        checkboxGroup.add(converterCheckBox, DefaultConstraints.checkbox)
+        checkboxGroup.add(bomCheckBox, DefaultConstraints.checkboxInsets)
+        checkboxGroup.add(dtoCheckBox, DefaultConstraints.checkboxInsets)
+
+        mainPanel.add(
+            checkboxGroup, GridBagConstraints(
+                0, GridBagConstraints.RELATIVE,
+                1, 1,
+                1.0, 0.0,
+                GridBagConstraints.NORTHWEST,
+                GridBagConstraints.BOTH,
+                JBInsets(0, 0, 0, 0),
+                0, 0
+            )
+        )
 
         val mainPanelWrapper = JPanel(FlowLayout(FlowLayout.LEFT))
         mainPanelWrapper.add(mainPanel)
