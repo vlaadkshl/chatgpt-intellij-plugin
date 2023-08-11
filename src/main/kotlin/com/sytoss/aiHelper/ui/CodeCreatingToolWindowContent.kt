@@ -4,16 +4,20 @@ import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
+import com.intellij.util.ui.components.BorderLayoutPanel
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
-import com.sytoss.aiHelper.services.PumlDiagramChooser
 import com.sytoss.aiHelper.services.UiBuilder
 import com.sytoss.aiHelper.services.codeCreating.BomFromPumlCreator
 import com.sytoss.aiHelper.ui.components.DefaultConstraints
 import com.sytoss.aiHelper.ui.components.FileChooserCreateComponent
 import com.sytoss.aiHelper.ui.components.JButtonWithListener
 import com.sytoss.aiHelper.ui.components.ScrollWithInsets
+import java.awt.FlowLayout
 import java.awt.GridBagLayout
-import javax.swing.*
+import javax.swing.JComponent
+import javax.swing.JLabel
+import javax.swing.JPanel
+import javax.swing.SwingConstants
 import kotlin.concurrent.thread
 
 class CodeCreatingToolWindowContent(private val project: Project) {
@@ -26,12 +30,9 @@ class CodeCreatingToolWindowContent(private val project: Project) {
 
     private val loadingLabel = JLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
 
-    private val pumlChooserBtn = JButtonWithListener("Choose PlantUML file") {
-        PumlDiagramChooser.selectFile(it.source as JButton, project)
-        createBomBtn.isEnabled = PumlDiagramChooser.isFileSelected()
-    }
+    private val pumlChooser = FileChooserCreateComponent("Choose PlantUML file", "puml", project)
 
-    private val createBomBtn = JButtonWithListener("Create BOM") {
+    private val generateBtn = JButtonWithListener("Generate Files") {
         loadingLabel.isVisible = true
         thread {
             var bomClasses: CreateResponse? = null
@@ -48,15 +49,21 @@ class CodeCreatingToolWindowContent(private val project: Project) {
         }
     }
 
-    private val bomChooser = FileChooserCreateComponent("Create DTO based on BOM", project)
-
     init {
-        createBomBtn.isEnabled = PumlDiagramChooser.isFileSelected()
+        val mainBorderLayout = BorderLayoutPanel()
 
-        contentPanel.firstComponent = ScrollWithInsets { mainPanel }
-        addWithConstraints(pumlChooserBtn)
-        addWithConstraints(createBomBtn)
-        addWithConstraints(bomChooser)
+        addWithConstraints(pumlChooser)
+
+        val mainPanelWrapper = JPanel(FlowLayout(FlowLayout.LEFT))
+        mainPanelWrapper.add(mainPanel)
+
+        val btnPanel = JPanel(FlowLayout(FlowLayout.LEFT))
+        btnPanel.add(generateBtn)
+
+        mainBorderLayout.addToCenter(mainPanelWrapper)
+        mainBorderLayout.addToBottom(btnPanel)
+
+        contentPanel.firstComponent = ScrollWithInsets { mainBorderLayout }
 
         elementsPanel.add(loadingLabel)
         loadingLabel.isVisible = false
