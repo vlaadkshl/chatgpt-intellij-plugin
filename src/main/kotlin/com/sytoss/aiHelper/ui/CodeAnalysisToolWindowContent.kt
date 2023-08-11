@@ -103,8 +103,6 @@ class CodeAnalysisToolWindowContent(private val project: Project) {
     }
 
     private fun preparePanel(additionalAction: (() -> Unit)? = null) {
-        controlPanel.apply()
-
         warningsPanel.removeAll()
         errorLabel.visible(false)
 
@@ -134,12 +132,14 @@ class CodeAnalysisToolWindowContent(private val project: Project) {
     }
 
     private fun analyseErrors() {
-        preparePanel()
+        controlPanel.apply()
 
         val isContinue = findPackagesAndAsk()
         if (!isContinue) {
             return
         }
+
+        preparePanel()
 
         thread {
             try {
@@ -171,12 +171,14 @@ class CodeAnalysisToolWindowContent(private val project: Project) {
     }
 
     private fun analysePyramid() {
-        preparePanel { PyramidChooser.clearPyramid() }
+        controlPanel.apply()
 
         val isContinue = findPackagesAndAsk()
         if (!isContinue) {
             return
         }
+
+        preparePanel { PyramidChooser.clearPyramid() }
 
         thread {
             try {
