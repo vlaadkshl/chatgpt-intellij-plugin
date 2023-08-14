@@ -33,9 +33,15 @@ object RequestSender {
             val httpResponse = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString())
             return json.decodeFromString<CreateResponse>(httpResponse.body())
         } catch (e: Exception) {
-            when {
-                e is SocketTimeoutException -> Messages.showErrorDialog("Timeout. Try again.", "Request Sending Error")
-                else -> Messages.showErrorDialog(e.message, "Request Sending Error")
+            ApplicationManager.getApplication().invokeLater {
+                when {
+                    e is SocketTimeoutException -> Messages.showErrorDialog(
+                        "Timeout. Try again.",
+                        "Request Sending Error"
+                    )
+
+                    else -> Messages.showErrorDialog(e.message, "Request Sending Error")
+                }
             }
         }
 
