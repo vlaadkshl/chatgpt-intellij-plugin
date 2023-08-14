@@ -10,7 +10,7 @@ import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
 import com.sytoss.aiHelper.services.UiBuilder
-import com.sytoss.aiHelper.services.codeCreating.BomFromPumlCreator
+import com.sytoss.aiHelper.services.codeCreating.Creators
 import com.sytoss.aiHelper.ui.components.*
 import java.awt.FlowLayout
 import java.awt.GridBagConstraints
@@ -87,7 +87,7 @@ class CodeCreatingToolWindowContent(private val project: Project) {
                 return@thread
             }
             try {
-                val bomClasses = BomFromPumlCreator.createBom(Files.readString(pumlChooser.selectedFiles[0].toNioPath()))
+                val bomClasses = Creators.createBom(Files.readString(pumlChooser.selectedFiles[0].toNioPath()))
                 DumbService.getInstance(project).smartInvokeLater {
                     if (bomClasses != null) {
                         UiBuilder.buildCreateClassesPanel(bomClasses, elementsPanel, project)

@@ -4,7 +4,7 @@ import com.sytoss.aiHelper.bom.codeCreating.CreateRequest
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.ModelType
 
-object BomFromPumlCreator {
+object Creators {
 
     fun createBom(pumlContent: String): CreateResponse? {
         val request = CreateRequest(
