@@ -76,16 +76,22 @@ class CodeCreatingToolWindowContent(private val project: Project) {
 
     private val generateBtn = JButtonWithListener("Generate Files") {
         loadingLabel.isVisible = true
-        elementsPanel.removeAll()
         thread {
-            if (elemsToGenerate.contains(ElementType.BOM).not()) {
-                DumbService.getInstance(project).smartInvokeLater { loadingLabel.isVisible = false }
+            if (elemsToGenerate.isEmpty()) {
+                DumbService.getInstance(project).smartInvokeLater {
+                    Messages.showInfoMessage("There is no types of files to create.", "Create Error")
+                    loadingLabel.isVisible = false
+                }
                 return@thread
             }
             if (pumlChooser.selectedFiles.isEmpty()) {
-                DumbService.getInstance(project).smartInvokeLater { loadingLabel.isVisible = false }
+                DumbService.getInstance(project).smartInvokeLater {
+                    Messages.showInfoMessage("There is no .puml file.", "Create Error")
+                    loadingLabel.isVisible = false
+                }
                 return@thread
             }
+            DumbService.getInstance(project).smartInvokeLater { elementsPanel.removeAll() }
             try {
                 val generateResult = Creators.create(elemsToGenerate, pumlChooser.selectedFiles[0])
                 DumbService.getInstance(project).smartInvokeLater {
@@ -96,9 +102,7 @@ class CodeCreatingToolWindowContent(private val project: Project) {
                     }
                 }
             } catch (e: Exception) {
-                DumbService.getInstance(project).smartInvokeLater {
-                    Messages.showErrorDialog(e.message, "Error")
-                }
+                DumbService.getInstance(project).smartInvokeLater { Messages.showErrorDialog(e.message, "Error") }
             } finally {
                 DumbService.getInstance(project).smartInvokeLater { loadingLabel.isVisible = false }
             }

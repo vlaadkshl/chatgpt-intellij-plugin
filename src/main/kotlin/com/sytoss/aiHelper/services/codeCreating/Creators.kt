@@ -19,8 +19,9 @@ object Creators {
             return result
         }
 
+        val pumlContent = Files.readString(pumlFile.toNioPath())
+
         if (elemsToGenerate.contains(ElementType.BOM)) {
-            val pumlContent = Files.readString(pumlFile.toNioPath())
             val createdResponse = createBom(pumlContent)
 
             if (createdResponse != null) {
@@ -29,12 +30,14 @@ object Creators {
         }
 
         if (elemsToGenerate.contains(ElementType.DTO)) {
-            result[ElementType.BOM]?.let {
-                val createdResponse = createDto(it)
+            val createdResponse =
+                if (result.containsKey(ElementType.BOM))
+                    result[ElementType.BOM]?.let { createDto(it) }
+                else
+                    createDto(pumlContent)
 
-                if (createdResponse != null) {
-                    result[ElementType.DTO] = createdResponse.result
-                }
+            if (createdResponse != null) {
+                result[ElementType.DTO] = createdResponse.result
             }
         }
 
@@ -57,7 +60,9 @@ object Creators {
         val request = CreateRequest(
             model = ModelType.GPT,
             prompt = """
-                    Write java classes for BOM according to the PUML diagram below:
+                    Write java classes for BOM according to the PUML diagram below. If there is some connections, that are displayed in PUML file, you need to put them in code.
+                    
+                    PUML diagram:
                     $pumlContent
                 """.trimIndent(),
             example = """
@@ -104,6 +109,75 @@ object Creators {
                         private String level;
                     
                         private int capacity;
+                    }
+                    ```
+                """.trimIndent()
+        )
+
+        return RequestSender.sendRequest(request)
+    }
+
+    private fun createDto(pumlContent: String): CreateResponse? {
+        val request = CreateRequest(
+            model = ModelType.GPT,
+            prompt = """
+                    Write java classes for DTO according to the PUML diagram below. If there is some connections, that are displayed in PUML file, you need to put them in code.
+                    
+                    PUML diagram:
+                    $pumlContent
+                """.trimIndent(),
+            example = """
+                    CourseDto.java:
+                    ```java
+                    import jakarta.persistence.*;
+                    import lombok.AllArgsConstructor;
+                    import lombok.Builder;
+                    import lombok.Data;
+                    import lombok.NoArgsConstructor;
+                    
+                    import java.util.List;
+                    
+                    @Entity
+                    @Data
+                    @Builder
+                    @Table(name = "COURSE")
+                    @NoArgsConstructor
+                    @AllArgsConstructor
+                    public class CourseDto {
+                        @Id
+                        @GeneratedValue(strategy = GenerationType.IDENTITY)
+                        private long id;
+                    
+                        @Column(name = "name")
+                        private String name;
+                    }
+                    ```
+                    
+                    StudentDto.java:
+                    ```java
+                    import jakarta.persistence.*;
+                    import lombok.AllArgsConstructor;
+                    import lombok.Builder;
+                    import lombok.Data;
+                    import lombok.NoArgsConstructor;
+                    
+                    @Entity
+                    @Data
+                    @Builder
+                    @Table(name = "STUDENT")
+                    @NoArgsConstructor
+                    @AllArgsConstructor
+                    public class StudentDto {
+                        @Id
+                        @GeneratedValue(strategy = GenerationType.IDENTITY)
+                        private long id;
+                    
+                        @Column(name = "name")
+                        private String name;
+                    
+                        @ManyToOne
+                        @JoinColumn(name = "course_id")
+                        private CourseDto course;
                     }
                     ```
                 """.trimIndent()

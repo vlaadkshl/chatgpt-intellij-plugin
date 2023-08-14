@@ -14,8 +14,11 @@ import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.services.chat.CodeCheckingService
 import com.sytoss.aiHelper.services.chat.PyramidCheckingService
 import com.sytoss.aiHelper.ui.components.DefaultConstraints
+import java.awt.BorderLayout
 import java.awt.GridBagLayout
 import java.awt.Label
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
 import javax.swing.JPanel
 
 object UiBuilder {
@@ -24,8 +27,6 @@ object UiBuilder {
         for (createdClass in response) {
             val classPanel = JPanel(GridBagLayout())
 
-            classPanel.add(Label(createdClass.fileName), DefaultConstraints.topLeftColumn)
-
             val document = EditorFactory.getInstance().createDocument(createdClass.body)
             val editorPane = EditorFactory.getInstance().createEditor(
                 document,
@@ -33,6 +34,15 @@ object UiBuilder {
                 JavaClassFileType.INSTANCE,
                 false
             )
+
+            val headerPanel = JPanel(BorderLayout())
+            headerPanel.add(Label(createdClass.fileName), BorderLayout.WEST)
+            headerPanel.add(ActionLink("Copy") {
+                val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+                clipboard.setContents(StringSelection(editorPane.document.text), null)
+            }, BorderLayout.EAST)
+
+            classPanel.add(headerPanel, DefaultConstraints.topLeftColumn)
             classPanel.add(editorPane.component, DefaultConstraints.topLeftColumn)
 
             parent.add(classPanel, DefaultConstraints.topLeftColumn)

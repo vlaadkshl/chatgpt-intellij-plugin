@@ -6,10 +6,12 @@ import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.net.SocketTimeoutException
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.time.Duration
 
 object RequestSender {
 
@@ -23,17 +25,19 @@ object RequestSender {
             .newBuilder(URI.create("http://192.168.32.111:8000/process"))
             .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(reqString))
+            .timeout(Duration.ofMinutes(3L))
             .build()
 
-        val httpResponse = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString())
-
-        var decodedResponse: CreateResponse? = null
         try {
-            decodedResponse = json.decodeFromString<CreateResponse>(httpResponse.body())
+            val httpResponse = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString())
+            return json.decodeFromString<CreateResponse>(httpResponse.body())
         } catch (e: Exception) {
-            Messages.showErrorDialog(e.message, "Json Decoding Error")
+            when {
+                e is SocketTimeoutException -> Messages.showErrorDialog("Timeout. Try again.", "Request Sending Error")
+                else -> Messages.showErrorDialog(e.message, "Request Sending Error")
+            }
         }
 
-        return decodedResponse
+        return null
     }
 }
