@@ -15,7 +15,6 @@ import com.sytoss.aiHelper.ui.components.*
 import java.awt.FlowLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
-import java.nio.file.Files
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -77,6 +76,7 @@ class CodeCreatingToolWindowContent(private val project: Project) {
 
     private val generateBtn = JButtonWithListener("Generate Files") {
         loadingLabel.isVisible = true
+        elementsPanel.removeAll()
         thread {
             if (elemsToGenerate.contains(ElementType.BOM).not()) {
                 DumbService.getInstance(project).smartInvokeLater { loadingLabel.isVisible = false }
@@ -87,10 +87,12 @@ class CodeCreatingToolWindowContent(private val project: Project) {
                 return@thread
             }
             try {
-                val bomClasses = Creators.createBom(Files.readString(pumlChooser.selectedFiles[0].toNioPath()))
+                val generateResult = Creators.create(elemsToGenerate, pumlChooser.selectedFiles[0])
                 DumbService.getInstance(project).smartInvokeLater {
-                    if (bomClasses != null) {
-                        UiBuilder.buildCreateClassesPanel(bomClasses, elementsPanel, project)
+                    if (generateResult.isNotEmpty()) {
+                        for (elems in generateResult) {
+                            UiBuilder.buildCreateClassesPanel(elems.value, elementsPanel, project)
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -137,9 +139,11 @@ class CodeCreatingToolWindowContent(private val project: Project) {
 
         contentPanel.firstComponent = ScrollWithInsets { mainBorderLayout }
 
-        elementsPanel.add(loadingLabel)
+        val mainElementsPanel = JPanel(GridBagLayout())
+        mainElementsPanel.add(loadingLabel, DefaultConstraints.topLeftColumn)
+        mainElementsPanel.add(elementsPanel, DefaultConstraints.topLeftColumn)
         loadingLabel.isVisible = false
-        contentPanel.secondComponent = ScrollWithInsets { elementsPanel }
+        contentPanel.secondComponent = ScrollWithInsets { mainElementsPanel }
     }
 
     private fun addWithConstraints(component: JComponent) {

@@ -20,15 +20,8 @@ import javax.swing.JPanel
 
 object UiBuilder {
 
-    fun buildCreateClassesPanel(response: CreateResponse, parent: JPanel, project: Project) {
-        parent.removeAll()
-
-        val classes = response.result
-        if (classes.isEmpty()) {
-            return
-        }
-
-        for (createdClass in classes) {
+    fun buildCreateClassesPanel(response: List<CreateResponse.CreateContent>, parent: JPanel, project: Project) {
+        for (createdClass in response) {
             val classPanel = JPanel(GridBagLayout())
 
             classPanel.add(Label(createdClass.fileName), DefaultConstraints.topLeftColumn)
