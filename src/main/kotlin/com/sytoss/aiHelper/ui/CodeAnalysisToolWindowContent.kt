@@ -8,8 +8,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.MessageDialogBuilder
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBRadioButton
-import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.dsl.builder.BottomGap
 import com.intellij.ui.dsl.builder.Cell
 import com.intellij.ui.dsl.builder.bind
@@ -18,22 +18,24 @@ import com.intellij.ui.layout.selected
 import com.sytoss.aiHelper.bom.ModuleChooseType
 import com.sytoss.aiHelper.services.PackageFinder
 import com.sytoss.aiHelper.services.PyramidChooser
+import com.sytoss.aiHelper.services.UiBuilder
 import com.sytoss.aiHelper.services.chat.CodeCheckingService
 import com.sytoss.aiHelper.services.chat.PyramidCheckingService
 import com.sytoss.aiHelper.ui.components.RulesTable
+import com.sytoss.aiHelper.ui.components.ScrollWithInsets
 import java.net.SocketTimeoutException
 import javax.swing.*
 import kotlin.concurrent.thread
 
-class PluginToolWindowContent(private val project: Project) {
+class CodeAnalysisToolWindowContent(private val project: Project) {
 
     val contentPanel = OnePixelSplitter()
 
     private val table = RulesTable()
 
-    private lateinit var loadingLabel: Cell<JLabel>
+    private lateinit var loadingLabel: Cell<JBLabel>
 
-    private lateinit var errorLabel: Cell<JLabel>
+    private lateinit var errorLabel: Cell<JBLabel>
 
     private var warningsPanel = JPanel()
 
@@ -81,27 +83,27 @@ class PluginToolWindowContent(private val project: Project) {
     }
 
     init {
-        contentPanel.firstComponent = JBScrollPane(controlPanel)
-        contentPanel.secondComponent = JBScrollPane(panel {
-            row {
-                loadingLabel = cell(
-                    JLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
-                ).visible(false)
+        contentPanel.firstComponent = ScrollWithInsets { controlPanel }
+        contentPanel.secondComponent = ScrollWithInsets {
+            panel {
+                row {
+                    loadingLabel = cell(
+                        JBLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
+                    ).visible(false)
+                }
+                row {
+                    errorLabel = cell(
+                        JBLabel("", AllIcons.General.BalloonError, SwingConstants.LEFT)
+                    ).visible(false)
+                }
+                row {
+                    cell(warningsPanel)
+                }
             }
-            row {
-                errorLabel = cell(
-                    JLabel("", AllIcons.General.BalloonError, SwingConstants.LEFT)
-                ).visible(false)
-            }
-            row {
-                cell(warningsPanel)
-            }
-        })
+        }
     }
 
     private fun preparePanel(additionalAction: (() -> Unit)? = null) {
-        controlPanel.apply()
-
         warningsPanel.removeAll()
         errorLabel.visible(false)
 
@@ -131,12 +133,14 @@ class PluginToolWindowContent(private val project: Project) {
     }
 
     private fun analyseErrors() {
-        preparePanel()
+        controlPanel.apply()
 
         val isContinue = findPackagesAndAsk()
         if (!isContinue) {
             return
         }
+
+        preparePanel()
 
         thread {
             try {
@@ -150,7 +154,7 @@ class PluginToolWindowContent(private val project: Project) {
                 ).result
 
                 DumbService.getInstance(project).smartInvokeLater {
-                    val reportPanel = CodeCheckingService.buildReportUi(report, project)
+                    val reportPanel = UiBuilder.buildCheckingReportPanel(report, project)
                     warningsPanel.add(reportPanel)
                 }
             } catch (e: Exception) {
@@ -168,12 +172,14 @@ class PluginToolWindowContent(private val project: Project) {
     }
 
     private fun analysePyramid() {
-        preparePanel { PyramidChooser.clearPyramid() }
+        controlPanel.apply()
 
         val isContinue = findPackagesAndAsk()
         if (!isContinue) {
             return
         }
+
+        preparePanel { PyramidChooser.clearPyramid() }
 
         thread {
             try {
@@ -186,7 +192,7 @@ class PluginToolWindowContent(private val project: Project) {
                 val report = PyramidCheckingService.analyse(fileContent).result
 
                 DumbService.getInstance(project).smartInvokeLater {
-                    val reportPanel = PyramidCheckingService.buildReportUi(report, project)
+                    val reportPanel = UiBuilder.buildPyramidReportPanel(report, project)
                     warningsPanel.add(reportPanel)
                 }
             } catch (e: Exception) {

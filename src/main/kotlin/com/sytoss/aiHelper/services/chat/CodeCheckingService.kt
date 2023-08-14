@@ -1,21 +1,12 @@
 package com.sytoss.aiHelper.services.chat
 
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.project.Project
-import com.intellij.ui.components.ActionLink
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.Label
 import com.sytoss.aiHelper.bom.chat.ChatMessageClassData
 import com.sytoss.aiHelper.bom.chat.checkingCode.rules.Rule
-import com.sytoss.aiHelper.bom.chat.warnings.ClassGroup
 import com.sytoss.aiHelper.bom.chat.warnings.WarningsResult
 import com.theokanning.openai.completion.chat.ChatMessage
 import com.theokanning.openai.completion.chat.ChatMessageRole
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import java.awt.GridBagConstraints
-import java.awt.GridBagLayout
-import javax.swing.JPanel
 
 object CodeCheckingService : ChatAnalysisAbstractService() {
 
@@ -77,49 +68,5 @@ object CodeCheckingService : ChatAnalysisAbstractService() {
         decodedResponse.result = decodedResponse.result.filter { it.warnings.isNotEmpty() }.toMutableList()
 
         return decodedResponse
-    }
-
-    fun buildReportUi(report: List<ClassGroup>, project: Project): JPanel {
-        val panel = JPanel(GridBagLayout())
-
-        val constraints = GridBagConstraints()
-        constraints.gridx = 0
-        constraints.gridy = GridBagConstraints.RELATIVE
-        constraints.anchor = GridBagConstraints.WEST
-
-        if (report.isEmpty()) {
-            panel.add(Label("No errors were found."), constraints)
-        } else {
-            for (classGroup in report) {
-                val classPanel = JPanel(GridBagLayout())
-
-                val file = getClassVirtualFile(classGroup, project)
-
-                if (file != null) {
-                    classPanel.add(ActionLink(classGroup.className) {
-                        FileEditorManager.getInstance(project).openFile(file, true)
-                    }, constraints)
-                } else {
-                    classPanel.add(JBLabel("${classGroup.className} (NO LINK)"), constraints)
-                }
-
-                for (warning in classGroup.warnings) {
-                    val warningPanel = JPanel()
-                    warningPanel.add(Label("Warning: ", null, null, true))
-                    warningPanel.add(Label(warning.warning))
-
-                    val linePanel = JPanel()
-                    linePanel.add(Label("Line: ", null, null, true))
-                    linePanel.add(Label(warning.lineInCode))
-
-                    classPanel.add(warningPanel, constraints)
-                    classPanel.add(linePanel, constraints)
-                }
-
-                panel.add(classPanel, constraints)
-            }
-        }
-
-        return panel
     }
 }

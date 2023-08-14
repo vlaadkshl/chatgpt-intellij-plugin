@@ -14,8 +14,12 @@ class PluginToolWindowFactory : ToolWindowFactory, DumbAware {
         PackageFinder.project = project
         PackageFinder.module = ModuleManager.getInstance(project).modules[0]
 
-        val toolWindowContent = PluginToolWindowContent(project)
-        val content = ContentFactory.getInstance().createContent(toolWindowContent.contentPanel, "", false)
-        toolWindow.contentManager.addContent(content)
+        val codeCreatingContent = ContentFactory.getInstance()
+            .createContent(CodeCreatingToolWindowContent(project).contentPanel, "Create", false)
+        toolWindow.contentManager.addContent(codeCreatingContent)
+
+        val codeAnalysisContent = ContentFactory.getInstance()
+            .createContent(CodeAnalysisToolWindowContent(project).contentPanel, "Analyse", false)
+        toolWindow.contentManager.addContent(codeAnalysisContent)
     }
 }
