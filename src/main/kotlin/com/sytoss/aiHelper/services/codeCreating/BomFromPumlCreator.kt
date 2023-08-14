@@ -3,18 +3,15 @@ package com.sytoss.aiHelper.services.codeCreating
 import com.sytoss.aiHelper.bom.codeCreating.CreateRequest
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.ModelType
-import com.sytoss.aiHelper.services.PumlDiagramChooser
 
 object BomFromPumlCreator {
 
-    fun createBom(): CreateResponse? {
-        val pumlFileContent = PumlDiagramChooser.getContent()
-
+    fun createBom(pumlContent: String): CreateResponse? {
         val request = CreateRequest(
             model = ModelType.GPT,
             prompt = """
                     Write java classes for BOM according to the PUML diagram below:
-                    $pumlFileContent
+                    $pumlContent
                 """.trimIndent(),
             example = """
                     Hotel.java:

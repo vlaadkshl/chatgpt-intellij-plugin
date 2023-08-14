@@ -2,18 +2,20 @@ package com.sytoss.aiHelper.ui
 
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.Messages
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.components.BorderLayoutPanel
-import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
+import com.sytoss.aiHelper.bom.codeCreating.ElementType
 import com.sytoss.aiHelper.services.UiBuilder
 import com.sytoss.aiHelper.services.codeCreating.BomFromPumlCreator
 import com.sytoss.aiHelper.ui.components.*
 import java.awt.FlowLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
+import java.nio.file.Files
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -32,33 +34,32 @@ class CodeCreatingToolWindowContent(private val project: Project) {
 
     private val pumlChooser = FileChooserCreateComponent("Choose PlantUML file", "puml", project)
 
-    private val generateBtn = JButtonWithListener("Generate Files") {
-        loadingLabel.isVisible = true
-        thread {
-            var bomClasses: CreateResponse? = null
-            try {
-                bomClasses = BomFromPumlCreator.createBom()
-            } finally {
-                DumbService.getInstance(project).smartInvokeLater {
-                    loadingLabel.isVisible = false
-                    if (bomClasses != null) {
-                        UiBuilder.buildCreateClassesPanel(bomClasses, elementsPanel, project)
-                    }
-                }
-            }
-        }
-    }
+    private val elemsToGenerate = mutableSetOf<ElementType>()
 
     private var isBomCheckboxSelected = false
+
     private var isDtoCheckboxSelected = false
 
-    private val converterCheckBox = JBCheckBoxWithListener("Converter") {}
+    private val converterCheckBox = JBCheckBoxWithListener("Converter") {
+        val source = it.source as JBCheckBox
+        if (source.isSelected) {
+            elemsToGenerate.add(ElementType.CONVERTER)
+        } else {
+            elemsToGenerate.remove(ElementType.CONVERTER)
+        }
+    }
 
     private val bomCheckBox = JBCheckBoxWithListener("BOM") {
         val source = it.source as JBCheckBox
         isBomCheckboxSelected = source.isSelected
 
         converterCheckBox.isEnabled = isBomCheckboxSelected && isDtoCheckboxSelected
+
+        if (source.isSelected) {
+            elemsToGenerate.add(ElementType.BOM)
+        } else {
+            elemsToGenerate.remove(ElementType.BOM)
+        }
     }
 
     private val dtoCheckBox = JBCheckBoxWithListener("DTO") {
@@ -66,6 +67,40 @@ class CodeCreatingToolWindowContent(private val project: Project) {
         isDtoCheckboxSelected = source.isSelected
 
         converterCheckBox.isEnabled = isBomCheckboxSelected && isDtoCheckboxSelected
+
+        if (source.isSelected) {
+            elemsToGenerate.add(ElementType.DTO)
+        } else {
+            elemsToGenerate.remove(ElementType.DTO)
+        }
+    }
+
+    private val generateBtn = JButtonWithListener("Generate Files") {
+        loadingLabel.isVisible = true
+        thread {
+            if (elemsToGenerate.contains(ElementType.BOM).not()) {
+                DumbService.getInstance(project).smartInvokeLater { loadingLabel.isVisible = false }
+                return@thread
+            }
+            if (pumlChooser.selectedFiles.isEmpty()) {
+                DumbService.getInstance(project).smartInvokeLater { loadingLabel.isVisible = false }
+                return@thread
+            }
+            try {
+                val bomClasses = BomFromPumlCreator.createBom(Files.readString(pumlChooser.selectedFiles[0].toNioPath()))
+                DumbService.getInstance(project).smartInvokeLater {
+                    if (bomClasses != null) {
+                        UiBuilder.buildCreateClassesPanel(bomClasses, elementsPanel, project)
+                    }
+                }
+            } catch (e: Exception) {
+                DumbService.getInstance(project).smartInvokeLater {
+                    Messages.showErrorDialog(e.message, "Error")
+                }
+            } finally {
+                DumbService.getInstance(project).smartInvokeLater { loadingLabel.isVisible = false }
+            }
+        }
     }
 
     init {
