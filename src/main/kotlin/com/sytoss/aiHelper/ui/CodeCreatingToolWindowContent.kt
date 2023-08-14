@@ -143,10 +143,15 @@ class CodeCreatingToolWindowContent(private val project: Project) {
 
         contentPanel.firstComponent = ScrollWithInsets { mainBorderLayout }
 
-        val mainElementsPanel = JPanel(GridBagLayout())
-        mainElementsPanel.add(loadingLabel, DefaultConstraints.topLeftColumn)
-        mainElementsPanel.add(elementsPanel, DefaultConstraints.topLeftColumn)
         loadingLabel.isVisible = false
+
+        val mainElementsWrapper = JPanel(GridBagLayout())
+        mainElementsWrapper.add(loadingLabel, DefaultConstraints.topLeftColumn)
+        mainElementsWrapper.add(elementsPanel, DefaultConstraints.topLeftColumn)
+
+        val mainElementsPanel = JPanel(FlowLayout(FlowLayout.LEFT))
+        mainElementsPanel.add(mainElementsWrapper)
+
         contentPanel.secondComponent = ScrollWithInsets { mainElementsPanel }
     }
 
