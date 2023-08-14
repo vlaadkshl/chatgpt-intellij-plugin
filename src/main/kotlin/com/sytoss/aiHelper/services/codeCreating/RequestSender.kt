@@ -1,5 +1,6 @@
 package com.sytoss.aiHelper.services.codeCreating
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ui.Messages
 import com.sytoss.aiHelper.bom.codeCreating.CreateRequest
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
@@ -25,7 +26,7 @@ object RequestSender {
             .newBuilder(URI.create("http://192.168.32.111:8000/process"))
             .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(reqString))
-            .timeout(Duration.ofMinutes(3L))
+            .timeout(Duration.ofMinutes(2L))
             .build()
 
         try {
