@@ -8,6 +8,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.MessageDialogBuilder
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBRadioButton
 import com.intellij.ui.dsl.builder.BottomGap
 import com.intellij.ui.dsl.builder.Cell
@@ -32,9 +33,9 @@ class CodeAnalysisToolWindowContent(private val project: Project) {
 
     private val table = RulesTable()
 
-    private lateinit var loadingLabel: Cell<JLabel>
+    private lateinit var loadingLabel: Cell<JBLabel>
 
-    private lateinit var errorLabel: Cell<JLabel>
+    private lateinit var errorLabel: Cell<JBLabel>
 
     private var warningsPanel = JPanel()
 
@@ -87,12 +88,12 @@ class CodeAnalysisToolWindowContent(private val project: Project) {
             panel {
                 row {
                     loadingLabel = cell(
-                        JLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
+                        JBLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
                     ).visible(false)
                 }
                 row {
                     errorLabel = cell(
-                        JLabel("", AllIcons.General.BalloonError, SwingConstants.LEFT)
+                        JBLabel("", AllIcons.General.BalloonError, SwingConstants.LEFT)
                     ).visible(false)
                 }
                 row {

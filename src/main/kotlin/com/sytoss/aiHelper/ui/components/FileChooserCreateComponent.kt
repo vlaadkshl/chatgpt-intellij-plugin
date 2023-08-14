@@ -7,9 +7,9 @@ import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.dsl.builder.panel
 import java.awt.FlowLayout
-import java.awt.Label
 import java.nio.file.Files
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -82,7 +82,7 @@ class FileChooserCreateComponent(text: String, project: Project) : JPanel(FlowLa
     init {
         changeButtonsStateToAppropriate()
 
-        add(Label(text))
+        add(JBLabel(text))
         add(chooser)
         add(showButton)
         add(removeButton)

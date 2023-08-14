@@ -6,6 +6,7 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBCheckBox
+import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
@@ -16,7 +17,6 @@ import java.awt.FlowLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import javax.swing.JComponent
-import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.SwingConstants
 import kotlin.concurrent.thread
@@ -29,7 +29,7 @@ class CodeCreatingToolWindowContent(private val project: Project) {
 
     private val elementsPanel = JPanel(GridBagLayout())
 
-    private val loadingLabel = JLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
+    private val loadingLabel = JBLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
 
     private val pumlChooser = FileChooserCreateComponent("Choose PlantUML file", "puml", project)
 

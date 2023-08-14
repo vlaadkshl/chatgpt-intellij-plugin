@@ -6,7 +6,6 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.Label
 import com.sytoss.aiHelper.bom.chat.pyramid.result.PyramidAnalysisContent
 import com.sytoss.aiHelper.bom.chat.pyramid.result.PyramidAnalysisGroup
 import com.sytoss.aiHelper.bom.chat.warnings.ClassGroup
@@ -71,17 +70,14 @@ object UiBuilder {
                 for (warning in classGroup.report) {
                     val linePanel = JPanel()
                     linePanel.add(
-                        Label(
+                        JBLabel(
                             if (warning.type == PyramidAnalysisContent.ReportClassType.FIELD)
                                 warning.name
                             else
-                                "${warning.name}()",
-                            null,
-                            null,
-                            true
+                                "${warning.name}()"
                         )
                     )
-                    linePanel.add(com.intellij.ui.components.Label(warning.warning))
+                    linePanel.add(JBLabel(warning.warning))
 
                     classPanel.add(linePanel, PyramidCheckingService.constraints)
                 }
@@ -114,12 +110,12 @@ object UiBuilder {
 
                 for (warning in classGroup.warnings) {
                     val warningPanel = JPanel()
-                    warningPanel.add(Label("Warning: ", null, null, true))
-                    warningPanel.add(com.intellij.ui.components.Label(warning.warning))
+                    warningPanel.add(JBLabel("Warning: "))
+                    warningPanel.add(JBLabel(warning.warning))
 
                     val linePanel = JPanel()
-                    linePanel.add(Label("Line: ", null, null, true))
-                    linePanel.add(com.intellij.ui.components.Label(warning.lineInCode))
+                    linePanel.add(JBLabel("Line: "))
+                    linePanel.add(JBLabel(warning.lineInCode))
 
                     classPanel.add(warningPanel, CodeCheckingService.constraints)
                     classPanel.add(linePanel, CodeCheckingService.constraints)
