@@ -41,7 +41,7 @@ class CodeCreatingToolWindowContent(private val project: Project) {
 
     private val converterCheckBox = JBCheckBoxWithListener("Converter") {
         val source = it.source as JBCheckBox
-        if (source.isSelected) {
+        if (source.isSelected && source.isEnabled) {
             elemsToGenerate.add(ElementType.CONVERTER)
         } else {
             elemsToGenerate.remove(ElementType.CONVERTER)
