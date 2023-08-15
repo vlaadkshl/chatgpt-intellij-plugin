@@ -22,9 +22,13 @@ import com.sytoss.aiHelper.services.UiBuilder
 import com.sytoss.aiHelper.services.chat.CodeCheckingService
 import com.sytoss.aiHelper.services.chat.PyramidCheckingService
 import com.sytoss.aiHelper.ui.components.RulesTable
+import com.sytoss.aiHelper.ui.components.RulesTableDialog
 import com.sytoss.aiHelper.ui.components.ScrollWithInsets
 import java.net.SocketTimeoutException
-import javax.swing.*
+import javax.swing.JButton
+import javax.swing.JComboBox
+import javax.swing.JPanel
+import javax.swing.SwingConstants
 import kotlin.concurrent.thread
 
 class CodeAnalysisToolWindowContent(private val project: Project) {
@@ -65,7 +69,7 @@ class CodeAnalysisToolWindowContent(private val project: Project) {
         }.enabledIf(oneModuleRadio.component.selected)
 
         row("Code Analysis Feature") {
-            cell(table)
+            button("Show Rules") { RulesTableDialog(table).show() }
             button("Errors Analysis") { analyseErrors() }
         }.bottomGap(BottomGap.MEDIUM)
 
@@ -134,6 +138,14 @@ class CodeAnalysisToolWindowContent(private val project: Project) {
 
     private fun analyseErrors() {
         controlPanel.apply()
+
+        if (table.isNothingSelected()) {
+            MessageDialogBuilder.okCancel(
+                "Code Checking Error",
+                "There is no checked rules. Please, check some and try again."
+            ).ask(project)
+            return
+        }
 
         val isContinue = findPackagesAndAsk()
         if (!isContinue) {
