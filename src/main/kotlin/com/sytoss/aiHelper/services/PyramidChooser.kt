@@ -22,7 +22,7 @@ object PyramidChooser {
     fun isPyramidSelected() = pyramid != null
 
     fun clearPyramid() {
-        pyramidFile = null
+        pyramid = null
     }
 
     fun selectFile(sourceButton: JButton, project: Project) {
