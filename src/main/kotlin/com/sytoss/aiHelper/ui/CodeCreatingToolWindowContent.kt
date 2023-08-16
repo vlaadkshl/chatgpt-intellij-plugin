@@ -7,8 +7,10 @@ import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBTabbedPane
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.components.BorderLayoutPanel
+import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
 import com.sytoss.aiHelper.services.UiBuilder
 import com.sytoss.aiHelper.services.codeCreating.Creators
@@ -16,6 +18,7 @@ import com.sytoss.aiHelper.ui.components.*
 import java.awt.FlowLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
+import java.nio.file.Files
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.SwingConstants
@@ -23,13 +26,13 @@ import kotlin.concurrent.thread
 
 class CodeCreatingToolWindowContent(private val project: Project) {
 
+    private val dumbService = DumbService.getInstance(project)
+
     val contentPanel = OnePixelSplitter()
 
     private val mainPanel = JPanel(GridBagLayout())
 
-    private val elementsPanel = JPanel(GridBagLayout())
-
-    private val loadingLabel = JBLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
+    private val tabbedPane = JBTabbedPane()
 
     private val pumlChooser = FileChooserCreateComponent("Choose PlantUML file", "puml", project)
 
@@ -76,44 +79,56 @@ class CodeCreatingToolWindowContent(private val project: Project) {
 
     private fun checkBeforeGenerating(): Boolean {
         if (elemsToGenerate.isEmpty()) {
-            DumbService.getInstance(project).smartInvokeLater {
-                Messages.showInfoMessage("There is no types of files to create.", "Create Error")
-                loadingLabel.isVisible = false
-            }
+            Messages.showInfoMessage("There is no types of files to create.", "Create Error")
             return false
         }
         if (pumlChooser.selectedFiles.isEmpty()) {
-            DumbService.getInstance(project).smartInvokeLater {
-                Messages.showInfoMessage("There is no .puml file.", "Create Error")
-                loadingLabel.isVisible = false
-            }
+            Messages.showInfoMessage("There is no .puml file.", "Create Error")
             return false
         }
         return true
     }
 
+    private fun createBom(): CreateResponse? {
+        var response: CreateResponse? = null
+
+        val loadingLabel = JBLabel("Loading BOMs...", AnimatedIcon.Default(), SwingConstants.LEFT)
+        try {
+            val innerPanel = JPanel(GridBagLayout())
+            innerPanel.add(loadingLabel, DefaultConstraints.topLeftColumn)
+
+            val innerPanelWrapper = JPanel(FlowLayout(FlowLayout.LEFT))
+            innerPanelWrapper.add(innerPanel)
+
+            tabbedPane.addTab("BOM", ScrollWithInsets { innerPanelWrapper })
+
+            val pumlContent = Files.readString(pumlChooser.selectedFiles[0].toNioPath())
+
+            Creators.createBom(pumlContent)?.let {
+                dumbService.smartInvokeLater { UiBuilder.buildCreateClassesPanel(it, innerPanel, project) }
+                response = it
+            }
+        } catch (e: Throwable) {
+            dumbService.smartInvokeLater { Messages.showErrorDialog(e.message, "Error") }
+        } finally {
+            dumbService.smartInvokeLater { loadingLabel.isVisible = false }
+        }
+
+        return response
+    }
+
     private val generateBtn = JButtonWithListener("Generate Files") {
         if (!checkBeforeGenerating()) return@JButtonWithListener
 
-        loadingLabel.isVisible = true
-        elementsPanel.removeAll()
+        tabbedPane.removeAll()
 
         thread {
-            try {
-                val generateResult = Creators.create(elemsToGenerate, pumlChooser.selectedFiles[0])
-                DumbService.getInstance(project).smartInvokeLater {
-                    if (generateResult.isNotEmpty()) {
-                        for (elems in generateResult) {
-                            UiBuilder.buildCreateClassesPanel(elems.value, elementsPanel, project)
-                        }
-                    }
-                }
-            } catch (e: Throwable) {
-                DumbService.getInstance(project).smartInvokeLater { Messages.showErrorDialog(e.message, "Error") }
-            } finally {
-                DumbService.getInstance(project).smartInvokeLater {
-                    loadingLabel.isVisible = false
-                    loadingLabel.text = "Loading..."
+            val result = mutableMapOf<ElementType, CreateResponse>()
+
+            //  Creating BOM
+            if (elemsToGenerate.contains(ElementType.BOM)) {
+                createBom()?.let {
+                    result[ElementType.BOM] = it
                 }
             }
         }
@@ -153,16 +168,7 @@ class CodeCreatingToolWindowContent(private val project: Project) {
 
         contentPanel.firstComponent = ScrollWithInsets { mainBorderLayout }
 
-        loadingLabel.isVisible = false
-
-        val mainElementsWrapper = JPanel(GridBagLayout())
-        mainElementsWrapper.add(loadingLabel, DefaultConstraints.topLeftColumn)
-        mainElementsWrapper.add(elementsPanel, DefaultConstraints.topLeftColumn)
-
-        val mainElementsPanel = JPanel(FlowLayout(FlowLayout.LEFT))
-        mainElementsPanel.add(mainElementsWrapper)
-
-        contentPanel.secondComponent = ScrollWithInsets { mainElementsPanel }
+        contentPanel.secondComponent = tabbedPane
     }
 
     private fun addWithConstraints(component: JComponent) {

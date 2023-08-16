@@ -22,8 +22,8 @@ import javax.swing.JPanel
 
 object UiBuilder {
 
-    fun buildCreateClassesPanel(response: List<CreateResponse.CreateContent>, parent: JPanel, project: Project) {
-        for (createdClass in response) {
+    fun buildCreateClassesPanel(response: CreateResponse, parent: JPanel, project: Project) {
+        for (createdClass in response.result) {
             val classPanel = JPanel(GridBagLayout())
 
             val document = EditorFactory.getInstance().createDocument(createdClass.body)
