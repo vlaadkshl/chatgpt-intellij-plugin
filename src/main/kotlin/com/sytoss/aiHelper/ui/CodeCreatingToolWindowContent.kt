@@ -39,6 +39,8 @@ class CodeCreatingToolWindowContent(private val project: Project) {
 
     private var isDtoCheckboxSelected = false
 
+    private fun isConverterNeedsEnabling() = isBomCheckboxSelected && isDtoCheckboxSelected
+
     private val converterCheckBox = JBCheckBoxWithListener("Converter") {
         val source = it.source as JBCheckBox
         if (source.isSelected && source.isEnabled) {
@@ -51,7 +53,7 @@ class CodeCreatingToolWindowContent(private val project: Project) {
     private val bomCheckBox = JBCheckBoxWithListener("BOM") {
         isBomCheckboxSelected = (it.source as JBCheckBox).isSelected
 
-        converterCheckBox.isEnabled = isBomCheckboxSelected && isDtoCheckboxSelected
+        converterCheckBox.isEnabled = isConverterNeedsEnabling()
 
         if (isBomCheckboxSelected) {
             elemsToGenerate.add(ElementType.BOM)
@@ -63,7 +65,7 @@ class CodeCreatingToolWindowContent(private val project: Project) {
     private val dtoCheckBox = JBCheckBoxWithListener("DTO") {
         isDtoCheckboxSelected = (it.source as JBCheckBox).isSelected
 
-        converterCheckBox.isEnabled = isBomCheckboxSelected && isDtoCheckboxSelected
+        converterCheckBox.isEnabled = isConverterNeedsEnabling()
 
         if (isDtoCheckboxSelected) {
             elemsToGenerate.add(ElementType.DTO)
@@ -72,24 +74,31 @@ class CodeCreatingToolWindowContent(private val project: Project) {
         }
     }
 
+    private fun checkBeforeGenerating(): Boolean {
+        if (elemsToGenerate.isEmpty()) {
+            DumbService.getInstance(project).smartInvokeLater {
+                Messages.showInfoMessage("There is no types of files to create.", "Create Error")
+                loadingLabel.isVisible = false
+            }
+            return false
+        }
+        if (pumlChooser.selectedFiles.isEmpty()) {
+            DumbService.getInstance(project).smartInvokeLater {
+                Messages.showInfoMessage("There is no .puml file.", "Create Error")
+                loadingLabel.isVisible = false
+            }
+            return false
+        }
+        return true
+    }
+
     private val generateBtn = JButtonWithListener("Generate Files") {
+        if (!checkBeforeGenerating()) return@JButtonWithListener
+
         loadingLabel.isVisible = true
+        elementsPanel.removeAll()
+
         thread {
-            if (elemsToGenerate.isEmpty()) {
-                DumbService.getInstance(project).smartInvokeLater {
-                    Messages.showInfoMessage("There is no types of files to create.", "Create Error")
-                    loadingLabel.isVisible = false
-                }
-                return@thread
-            }
-            if (pumlChooser.selectedFiles.isEmpty()) {
-                DumbService.getInstance(project).smartInvokeLater {
-                    Messages.showInfoMessage("There is no .puml file.", "Create Error")
-                    loadingLabel.isVisible = false
-                }
-                return@thread
-            }
-            DumbService.getInstance(project).smartInvokeLater { elementsPanel.removeAll() }
             try {
                 val generateResult = Creators.create(elemsToGenerate, pumlChooser.selectedFiles[0])
                 DumbService.getInstance(project).smartInvokeLater {
@@ -99,16 +108,19 @@ class CodeCreatingToolWindowContent(private val project: Project) {
                         }
                     }
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 DumbService.getInstance(project).smartInvokeLater { Messages.showErrorDialog(e.message, "Error") }
             } finally {
-                DumbService.getInstance(project).smartInvokeLater { loadingLabel.isVisible = false }
+                DumbService.getInstance(project).smartInvokeLater {
+                    loadingLabel.isVisible = false
+                    loadingLabel.text = "Loading..."
+                }
             }
         }
     }
 
     init {
-        converterCheckBox.isEnabled = false
+        converterCheckBox.isEnabled = isConverterNeedsEnabling()
 
         val mainBorderLayout = BorderLayoutPanel()
 
