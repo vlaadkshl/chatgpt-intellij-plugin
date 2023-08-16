@@ -49,12 +49,11 @@ class CodeCreatingToolWindowContent(private val project: Project) {
     }
 
     private val bomCheckBox = JBCheckBoxWithListener("BOM") {
-        val source = it.source as JBCheckBox
-        isBomCheckboxSelected = source.isSelected
+        isBomCheckboxSelected = (it.source as JBCheckBox).isSelected
 
         converterCheckBox.isEnabled = isBomCheckboxSelected && isDtoCheckboxSelected
 
-        if (source.isSelected) {
+        if (isBomCheckboxSelected) {
             elemsToGenerate.add(ElementType.BOM)
         } else {
             elemsToGenerate.remove(ElementType.BOM)
@@ -62,12 +61,11 @@ class CodeCreatingToolWindowContent(private val project: Project) {
     }
 
     private val dtoCheckBox = JBCheckBoxWithListener("DTO") {
-        val source = it.source as JBCheckBox
-        isDtoCheckboxSelected = source.isSelected
+        isDtoCheckboxSelected = (it.source as JBCheckBox).isSelected
 
         converterCheckBox.isEnabled = isBomCheckboxSelected && isDtoCheckboxSelected
 
-        if (source.isSelected) {
+        if (isDtoCheckboxSelected) {
             elemsToGenerate.add(ElementType.DTO)
         } else {
             elemsToGenerate.remove(ElementType.DTO)
