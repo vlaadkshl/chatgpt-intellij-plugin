@@ -28,6 +28,7 @@ abstract class ChatAnalysisAbstractService {
     protected fun buildRequest(messages: List<ChatMessage>): ChatCompletionRequest =
         ChatCompletionRequest.builder()
             .model("gpt-3.5-turbo-16k")
+            .temperature(0.0)
             .messages(messages)
             .build()
 
