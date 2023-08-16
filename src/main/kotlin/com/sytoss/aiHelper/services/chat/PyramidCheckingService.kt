@@ -19,40 +19,7 @@ object PyramidCheckingService : ChatAnalysisAbstractService() {
             """
             You are a helpful assistant.
             You check classes for given conditions and give result of analysis to the user.
-            You don't create code for checking, you just analyse given code according to the conditions.
-            Conditions are instructions of what should or should not be in these classes.
         """.trimIndent(),
-//            """
-//            User gives you conditions in JSON format like this:
-//            {
-//               "converter": [{
-//                   "name": "{some class name}",
-//                   "add": [
-//                       "{some field or method}",
-//                       "{some field or method}"
-//                   ],
-//                   "change": [
-//                       "{some field or method}"
-//                   ],
-//                   "remove": [
-//                       "{some field or method}"
-//                   ]
-//               }, {
-//                   "name": "{some class name}",
-//                   "add": [
-//                       "{some field or method}"
-//                   ],
-//                   "remove": [
-//                       "{some field or method}"
-//                   ]
-//               }],
-//               "bom": [{the same as in converter}],
-//               "dto": [{the same as in converter}],
-//               "interface": [{the same as in converter}],
-//               "service": [{the same as in converter}],
-//               "connector": [{the same as in converter}]
-//            }
-//        """.trimIndent(),
             """
             Also user gives you classes with their type in this format:
             Class: {some class name},
@@ -61,6 +28,12 @@ object PyramidCheckingService : ChatAnalysisAbstractService() {
             ```
             {some program code multi-line}
             ```
+        """.trimIndent(), """
+            Acceptance criteria: 
+            - If field or method is in "add" or "change" conditions AND is present in appropriate class.
+            - If field or method is in "remove" conditions AND is not present in appropriate class.
+            
+            If there is no errors for class, don't put it in result.
         """.trimIndent(), """
             IMPORTANT! Show analysis result in JSON format only according to this template:
             {
@@ -73,13 +46,6 @@ object PyramidCheckingService : ChatAnalysisAbstractService() {
                     }]
                 ]
             }
-            If there is no errors for class, don't put it in result
-        """.trimIndent(), """
-            Here are the steps you must follow while checking the code:
-            1. If this class doesn't exist in conditions, you skip it.
-            2. If some field or method exists in "add" or "change", you check, if it exists in appropriate class. If don't, you say it in warning.
-            3. If some field or method exists in "remove", you check, if it doesn't exist in appropriate class. If exists, you say it in warning.
-            4. If some field or method isn't mentioned in conditions, you skip it.
         """.trimIndent()
         )
 
