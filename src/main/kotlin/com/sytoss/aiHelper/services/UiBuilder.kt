@@ -1,6 +1,7 @@
 package com.sytoss.aiHelper.services
 
 import com.intellij.ide.highlighter.JavaClassFileType
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
@@ -22,7 +23,12 @@ import javax.swing.JPanel
 
 object UiBuilder {
 
-    fun buildCreateClassesPanel(response: CreateResponse, parent: JPanel, project: Project) {
+    fun buildCreateClassesPanel(
+        response: CreateResponse,
+        parent: JPanel,
+        project: Project,
+        editors: MutableMap<String, Editor>
+    ) {
         for (createdClass in response.result) {
             val classPanel = JPanel(GridBagLayout())
 
@@ -45,6 +51,7 @@ object UiBuilder {
             classPanel.add(editorPane.component, DefaultConstraints.topLeftColumn)
 
             parent.add(classPanel, DefaultConstraints.topLeftColumn)
+            editors[createdClass.fileName] = editorPane
         }
     }
 

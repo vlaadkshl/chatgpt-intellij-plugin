@@ -10,6 +10,7 @@ class ScrollWithInsets(createComponent: () -> JComponent) : JBScrollPane(
     object : BorderLayoutPanel() {
         init {
             addToCenter(createComponent())
+            border = null
         }
 
         override fun getInsets(): Insets = JBUI.insets(10)

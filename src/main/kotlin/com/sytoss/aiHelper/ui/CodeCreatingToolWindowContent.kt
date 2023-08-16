@@ -1,5 +1,7 @@
 package com.sytoss.aiHelper.ui
 
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
@@ -7,10 +9,10 @@ import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTabbedPane
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.components.BorderLayoutPanel
-import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
 import com.sytoss.aiHelper.services.UiBuilder
 import com.sytoss.aiHelper.services.codeCreating.Creators
@@ -89,8 +91,13 @@ class CodeCreatingToolWindowContent(private val project: Project) {
         return true
     }
 
-    private fun createBom(): CreateResponse? {
-        var response: CreateResponse? = null
+    private var isNeedContinue = false
+    private fun needsContinue() {
+        isNeedContinue = true
+    }
+
+    private fun createBom(continuable: Boolean): MutableMap<String, Editor> {
+        val editors: MutableMap<String, Editor> = mutableMapOf()
 
         val loadingLabel = JBLabel("Loading BOMs...", AnimatedIcon.Default(), SwingConstants.LEFT)
         try {
@@ -100,13 +107,25 @@ class CodeCreatingToolWindowContent(private val project: Project) {
             val innerPanelWrapper = JPanel(FlowLayout(FlowLayout.LEFT))
             innerPanelWrapper.add(innerPanel)
 
-            tabbedPane.addTab("BOM", ScrollWithInsets { innerPanelWrapper })
+            val innerPanelBorder = BorderLayoutPanel()
+            if (continuable) {
+                innerPanelBorder.addToTop(JButtonWithListener("Continue") { needsContinue() })
+            }
+            innerPanelBorder.addToCenter(JBScrollPane(innerPanelWrapper))
 
-            val pumlContent = Files.readString(pumlChooser.selectedFiles[0].toNioPath())
+            tabbedPane.addTab("BOM", innerPanelBorder)
 
-            Creators.createBom(pumlContent)?.let {
-                dumbService.smartInvokeLater { UiBuilder.buildCreateClassesPanel(it, innerPanel, project) }
-                response = it
+            var pumlContent: String? = null
+            ApplicationManager.getApplication().invokeAndWait {
+                pumlContent = Files.readString(pumlChooser.selectedFiles[0].toNioPath())
+            }
+
+            pumlContent?.let { puml ->
+                Creators.createBom(puml)?.let {
+                    ApplicationManager.getApplication().invokeAndWait {
+                        UiBuilder.buildCreateClassesPanel(it, innerPanel, project, editors)
+                    }
+                }
             }
         } catch (e: Throwable) {
             dumbService.smartInvokeLater { Messages.showErrorDialog(e.message, "Error") }
@@ -114,8 +133,9 @@ class CodeCreatingToolWindowContent(private val project: Project) {
             dumbService.smartInvokeLater { loadingLabel.isVisible = false }
         }
 
-        return response
+        return editors
     }
+
 
     private val generateBtn = JButtonWithListener("Generate Files") {
         if (!checkBeforeGenerating()) return@JButtonWithListener
@@ -123,12 +143,29 @@ class CodeCreatingToolWindowContent(private val project: Project) {
         tabbedPane.removeAll()
 
         thread {
-            val result = mutableMapOf<ElementType, CreateResponse>()
+            val result = mutableMapOf<ElementType, MutableMap<String, Editor>>()
 
-            //  Creating BOM
-            if (elemsToGenerate.contains(ElementType.BOM)) {
-                createBom()?.let {
-                    result[ElementType.BOM] = it
+            for (elemToGenerate in elemsToGenerate) {
+
+                when (elemToGenerate) {
+                    ElementType.BOM -> {
+                        createBom(true)
+                            .let { result[ElementType.BOM] = it }
+
+                        while (!isNeedContinue) {
+                            Thread.sleep(100)
+                        }
+
+                        isNeedContinue = false
+                    }
+
+                    ElementType.DTO -> {
+                        val isBomExists = result.containsKey(ElementType.BOM)
+                    }
+
+                    ElementType.CONVERTER -> {
+                        TODO()
+                    }
                 }
             }
         }
