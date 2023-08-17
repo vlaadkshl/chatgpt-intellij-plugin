@@ -73,53 +73,6 @@ object Creators {
         return editors
     }
 
-//    private fun create(elemsToGenerate: Set<ElementType>, pumlFile: VirtualFile)
-//            : Map<ElementType, List<CreateResponse.CreateContent>> {
-//        val result = mutableMapOf<ElementType, List<CreateResponse.CreateContent>>()
-//
-//        if (elemsToGenerate.contains(ElementType.CONVERTER)
-//            && (!elemsToGenerate.contains(ElementType.BOM) || !elemsToGenerate.contains(ElementType.DTO))
-//        ) {
-//            return result
-//        }
-//
-//        val pumlContent = Files.readString(pumlFile.toNioPath())
-//
-//        if (elemsToGenerate.contains(ElementType.BOM)) {
-//            val createdResponse = createBom(pumlContent)
-//
-//            if (createdResponse != null) {
-//                result[ElementType.BOM] = createdResponse.result
-//            }
-//        }
-//
-//        if (elemsToGenerate.contains(ElementType.DTO)) {
-//            val createdResponse =
-//                if (result.containsKey(ElementType.BOM))
-//                    result[ElementType.BOM]?.let { createDto(it) }
-//                else
-//                    createDto(pumlContent)
-//
-//            if (createdResponse != null) {
-//                result[ElementType.DTO] = createdResponse.result
-//            }
-//        }
-//
-//        if (elemsToGenerate.contains(ElementType.CONVERTER)) {
-//            result[ElementType.BOM]?.let { boms ->
-//                result[ElementType.DTO]?.let { dtos ->
-//                    val createdResponse = createConverters(boms, dtos)
-//
-//                    if (createdResponse != null) {
-//                        result[ElementType.CONVERTER] = createdResponse.result
-//                    }
-//                }
-//            }
-//        }
-//
-//        return result
-//    }
-
     fun createBom(pumlContent: String): CreateResponse? {
         val request = CreateRequest(
             model = ModelType.GPT,
