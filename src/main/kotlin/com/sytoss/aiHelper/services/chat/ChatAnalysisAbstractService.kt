@@ -1,11 +1,11 @@
 package com.sytoss.aiHelper.services.chat
 
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
 import com.sytoss.aiHelper.bom.chat.ChatMessageClassData
 import com.sytoss.aiHelper.bom.chat.warnings.ClassGroupTemplate
+import com.sytoss.aiHelper.services.CommonFields.project
 import com.sytoss.aiHelper.ui.components.DefaultConstraints
 import com.theokanning.openai.client.OpenAiApi
 import com.theokanning.openai.completion.chat.ChatCompletionRequest
@@ -37,7 +37,7 @@ abstract class ChatAnalysisAbstractService {
         return response?.choices?.get(0)?.message?.content ?: throw RuntimeException("Can't get response")
     }
 
-    fun getClassVirtualFile(warningClass: ClassGroupTemplate, project: Project): VirtualFile? {
+    fun getClassVirtualFile(warningClass: ClassGroupTemplate): VirtualFile? {
         val qualifiedName = warningClass.className
         val psiClass = JavaPsiFacade.getInstance(project).findClass(
             qualifiedName,

@@ -4,7 +4,6 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.DumbService
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.MessageDialogBuilder
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
@@ -16,6 +15,7 @@ import com.intellij.ui.dsl.builder.bind
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.layout.selected
 import com.sytoss.aiHelper.bom.ModuleChooseType
+import com.sytoss.aiHelper.services.CommonFields.project
 import com.sytoss.aiHelper.services.PackageFinder
 import com.sytoss.aiHelper.services.PyramidChooser
 import com.sytoss.aiHelper.services.UiBuilder
@@ -31,7 +31,7 @@ import javax.swing.JPanel
 import javax.swing.SwingConstants
 import kotlin.concurrent.thread
 
-class CodeAnalysisToolWindowContent(private val project: Project) {
+class CodeAnalysisToolWindowContent {
 
     val contentPanel = OnePixelSplitter()
 
@@ -76,7 +76,7 @@ class CodeAnalysisToolWindowContent(private val project: Project) {
         row("Pyramid Matching Feature") {
             button("Select Pyramid JSON") {
                 DumbService.getInstance(project).smartInvokeLater {
-                    PyramidChooser.selectFile(it.source as JButton, project)
+                    PyramidChooser.selectFile(it.source as JButton)
                     pyramidAnalysisButton.enabled(PyramidChooser.isFileSelected())
                 }
             }
@@ -166,7 +166,7 @@ class CodeAnalysisToolWindowContent(private val project: Project) {
                 ).result
 
                 DumbService.getInstance(project).smartInvokeLater {
-                    val reportPanel = UiBuilder.buildCheckingReportPanel(report, project)
+                    val reportPanel = UiBuilder.buildCheckingReportPanel(report)
                     warningsPanel.add(reportPanel)
                 }
             } catch (e: Exception) {
@@ -204,7 +204,7 @@ class CodeAnalysisToolWindowContent(private val project: Project) {
                 val report = PyramidCheckingService.analyse(fileContent).result
 
                 DumbService.getInstance(project).smartInvokeLater {
-                    val reportPanel = UiBuilder.buildPyramidReportPanel(report, project)
+                    val reportPanel = UiBuilder.buildPyramidReportPanel(report)
                     warningsPanel.add(reportPanel)
                 }
             } catch (e: Exception) {

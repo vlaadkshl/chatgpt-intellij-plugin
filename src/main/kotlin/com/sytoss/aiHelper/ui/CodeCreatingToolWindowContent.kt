@@ -2,20 +2,15 @@ package com.sytoss.aiHelper.ui
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.project.DumbService
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
-import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBCheckBox
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTabbedPane
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
-import com.sytoss.aiHelper.services.UiBuilder
 import com.sytoss.aiHelper.services.codeCreating.Creators
+import com.sytoss.aiHelper.services.codeCreating.Creators.isNeedContinue
 import com.sytoss.aiHelper.ui.components.*
 import java.awt.FlowLayout
 import java.awt.GridBagConstraints
@@ -23,20 +18,16 @@ import java.awt.GridBagLayout
 import java.nio.file.Files
 import javax.swing.JComponent
 import javax.swing.JPanel
-import javax.swing.SwingConstants
 import kotlin.concurrent.thread
 
-class CodeCreatingToolWindowContent(private val project: Project) {
-
-    private val dumbService = DumbService.getInstance(project)
-
+class CodeCreatingToolWindowContent {
     val contentPanel = OnePixelSplitter()
 
     private val mainPanel = JPanel(GridBagLayout())
 
     private val tabbedPane = JBTabbedPane()
 
-    private val pumlChooser = FileChooserCreateComponent("Choose PlantUML file", "puml", project)
+    private val pumlChooser = FileChooserCreateComponent("Choose PlantUML file", "puml")
 
     private val elemsToGenerate = mutableSetOf<ElementType>()
 
@@ -91,32 +82,9 @@ class CodeCreatingToolWindowContent(private val project: Project) {
         return true
     }
 
-    private var isNeedContinue = false
-    private fun needsContinue() {
-        isNeedContinue = true
-    }
 
-    private fun createBom(continuable: Boolean): MutableMap<String, Editor> {
-        val editors: MutableMap<String, Editor> = mutableMapOf()
-
-        val loadingLabel = JBLabel("Loading BOMs...", AnimatedIcon.Default(), SwingConstants.LEFT)
-        try {
-            val innerPanel = JPanel(GridBagLayout())
-            innerPanel.add(loadingLabel, DefaultConstraints.topLeftColumn)
-
-            val innerPanelWrapper = JPanel(FlowLayout(FlowLayout.LEFT))
-            innerPanelWrapper.add(innerPanel)
-
-            val innerPanelBorder = BorderLayoutPanel()
-            val continueButton = JButtonWithListener("Continue") { needsContinue() }
-            continueButton.isEnabled = false
-            if (continuable) {
-                innerPanelBorder.addToTop(continueButton)
-            }
-            innerPanelBorder.addToCenter(JBScrollPane(innerPanelWrapper))
-
-            tabbedPane.addTab("BOM", innerPanelBorder)
-
+    private fun createBom(continuable: Boolean): MutableMap<String, Editor> =
+        Creators.create(continuable, "BOM", tabbedPane) { showCallback ->
             var pumlContent: String? = null
             ApplicationManager.getApplication().invokeAndWait {
                 pumlContent = Files.readString(pumlChooser.selectedFiles[0].toNioPath())
@@ -124,21 +92,24 @@ class CodeCreatingToolWindowContent(private val project: Project) {
 
             pumlContent?.let { puml ->
                 Creators.createBom(puml)?.let {
-                    ApplicationManager.getApplication().invokeAndWait {
-                        UiBuilder.buildCreateClassesPanel(it, innerPanel, project, editors)
-                        continueButton.isEnabled = true
-                    }
+                    showCallback(it)
                 }
             }
-        } catch (e: Throwable) {
-            dumbService.smartInvokeLater { Messages.showErrorDialog(e.message, "Error") }
-        } finally {
-            dumbService.smartInvokeLater { loadingLabel.isVisible = false }
         }
 
-        return editors
-    }
+    private fun createDto(continuable: Boolean): MutableMap<String, Editor> =
+        Creators.create(continuable, "DTO", tabbedPane) { showCallback ->
+            var pumlContent: String? = null
+            ApplicationManager.getApplication().invokeAndWait {
+                pumlContent = Files.readString(pumlChooser.selectedFiles[0].toNioPath())
+            }
 
+            pumlContent?.let { puml ->
+                Creators.createBom(puml)?.let {
+                    showCallback(it)
+                }
+            }
+        }
 
     private val generateBtn = JButtonWithListener("Generate Files") {
         if (!checkBeforeGenerating()) return@JButtonWithListener
@@ -149,7 +120,6 @@ class CodeCreatingToolWindowContent(private val project: Project) {
             val result = mutableMapOf<ElementType, MutableMap<String, Editor>>()
 
             for (elemToGenerate in elemsToGenerate) {
-
                 when (elemToGenerate) {
                     ElementType.BOM -> {
                         createBom(true)
@@ -163,7 +133,6 @@ class CodeCreatingToolWindowContent(private val project: Project) {
                     }
 
                     ElementType.DTO -> {
-                        val isBomExists = result.containsKey(ElementType.BOM)
                     }
 
                     ElementType.CONVERTER -> {

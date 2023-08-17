@@ -2,20 +2,18 @@ package com.sytoss.aiHelper.services
 
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiDirectory
 import com.intellij.psi.PsiManager
-import com.sytoss.aiHelper.bom.chat.ChatMessageClassData
-import com.sytoss.aiHelper.bom.types.FileTypes
 import com.sytoss.aiHelper.bom.ModuleChooseType
 import com.sytoss.aiHelper.bom.PackageFinderDetails
+import com.sytoss.aiHelper.bom.chat.ChatMessageClassData
+import com.sytoss.aiHelper.bom.types.FileTypes
+import com.sytoss.aiHelper.services.CommonFields.project
 import java.nio.file.Files
 
 object PackageFinder {
-    lateinit var project: Project
-
     lateinit var module: Module
 
     var moduleChooseType = ModuleChooseType.ALL_MODULES

@@ -2,8 +2,8 @@ package com.sytoss.aiHelper.services
 
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.sytoss.aiHelper.services.CommonFields.project
 import java.nio.file.Files
 import javax.swing.JButton
 
@@ -13,7 +13,7 @@ object PumlDiagramChooser {
 
     fun isFileSelected() = diagramFile != null
 
-    fun selectFile(sourceButton: JButton, project: Project) {
+    fun selectFile(sourceButton: JButton) {
         FileChooser.chooseFile(
             FileChooserDescriptorFactory.createSingleFileDescriptor("puml"),
             project,

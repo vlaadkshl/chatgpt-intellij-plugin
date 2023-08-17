@@ -1,15 +1,80 @@
 package com.sytoss.aiHelper.services.codeCreating
 
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.project.DumbService
+import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.ui.AnimatedIcon
+import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.components.JBTabbedPane
+import com.intellij.util.ui.components.BorderLayoutPanel
 import com.sytoss.aiHelper.bom.codeCreating.CreateRequest
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
 import com.sytoss.aiHelper.bom.codeCreating.ModelType
+import com.sytoss.aiHelper.services.CommonFields.project
+import com.sytoss.aiHelper.services.UiBuilder
+import com.sytoss.aiHelper.ui.components.DefaultConstraints
+import com.sytoss.aiHelper.ui.components.JButtonWithListener
+import java.awt.FlowLayout
+import java.awt.GridBagLayout
 import java.nio.file.Files
+import javax.swing.JPanel
+import javax.swing.SwingConstants
 
 object Creators {
+    private val dumbService = DumbService.getInstance(project)
 
-    fun create(elemsToGenerate: Set<ElementType>, pumlFile: VirtualFile)
+    var isNeedContinue = false
+
+    private fun needsContinue() {
+        isNeedContinue = true
+    }
+
+    fun create(
+        continuable: Boolean,
+        name: String,
+        tabbedPane: JBTabbedPane,
+        callback: ((CreateResponse) -> Unit) -> Unit
+    ): MutableMap<String, Editor> {
+        val editors = mutableMapOf<String, Editor>()
+
+        val loadingLabel = JBLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
+        try {
+            val innerPanel = JPanel(GridBagLayout())
+            innerPanel.add(loadingLabel, DefaultConstraints.topLeftColumn)
+
+            val innerPanelWrapper = JPanel(FlowLayout(FlowLayout.LEFT))
+            innerPanelWrapper.add(innerPanel)
+
+            val innerPanelBorder = BorderLayoutPanel()
+            val continueButton = JButtonWithListener("Continue") { needsContinue() }
+            continueButton.isEnabled = false
+            if (continuable) {
+                innerPanelBorder.addToTop(continueButton)
+            }
+            innerPanelBorder.addToCenter(JBScrollPane(innerPanelWrapper))
+
+            tabbedPane.addTab(name, innerPanelBorder)
+
+            callback {
+                ApplicationManager.getApplication().invokeAndWait {
+                    editors.putAll(UiBuilder.buildCreateClassesPanel(it, innerPanel))
+                    continueButton.isEnabled = true
+                }
+            }
+        } catch (e: Throwable) {
+            dumbService.smartInvokeLater { Messages.showErrorDialog(e.message, "Error") }
+        } finally {
+            dumbService.smartInvokeLater { loadingLabel.isVisible = false }
+        }
+
+        return editors
+    }
+
+    private fun create(elemsToGenerate: Set<ElementType>, pumlFile: VirtualFile)
             : Map<ElementType, List<CreateResponse.CreateContent>> {
         val result = mutableMapOf<ElementType, List<CreateResponse.CreateContent>>()
 

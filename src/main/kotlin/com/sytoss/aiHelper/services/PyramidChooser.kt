@@ -2,9 +2,9 @@ package com.sytoss.aiHelper.services
 
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.sytoss.aiHelper.bom.chat.pyramid.Pyramid
+import com.sytoss.aiHelper.services.CommonFields.project
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.nio.file.Files
@@ -25,7 +25,7 @@ object PyramidChooser {
         pyramid = null
     }
 
-    fun selectFile(sourceButton: JButton, project: Project) {
+    fun selectFile(sourceButton: JButton) {
         FileChooser.chooseFile(
             FileChooserDescriptorFactory.createSingleFileDescriptor("json"), project, null
         ) { file ->
