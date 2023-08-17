@@ -157,7 +157,7 @@ object Creators {
         val request = CreateRequest(
             model = ModelType.GPT,
             prompt = """
-                    Write java classes for DTO according to the BOM classes below:
+                    Create DTO classes according to the BOM classes below:
                     ${bomElements.joinToString(separator = "\n")}
                 """.trimIndent(),
             example = dtoExample
@@ -166,20 +166,17 @@ object Creators {
         return RequestSender.sendRequest(request)
     }
 
-    fun createConverters(
-        boms: List<CreateResponse.CreateContent>,
-        dtos: List<CreateResponse.CreateContent>
-    ): CreateResponse? {
+    fun createConverters(boms: List<String>, dtos: List<String>): CreateResponse? {
         val request = CreateRequest(
             model = ModelType.GPT,
             prompt = """
                     Write java classes for Converters from BOM to DTO and vice versa according to the classes below:
                     
                     BOM:
-                    ${boms.joinToString(separator = "\n\n") { it.body }}
+                    ${boms.joinToString(separator = "\n\n")}
                     
                     DTO:
-                    ${dtos.joinToString(separator = "\n\n") { it.body }}
+                    ${dtos.joinToString(separator = "\n\n")}
                 """.trimIndent(),
             example = converterExample
         )

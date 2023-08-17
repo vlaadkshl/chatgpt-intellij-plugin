@@ -86,6 +86,9 @@ class CodeCreatingToolWindowContent {
 
     private val generateEditors = mutableMapOf<ElementType, MutableMap<String, Editor>>()
 
+    private fun getTextsFromEditors(elementType: ElementType): List<String> =
+        generateEditors[elementType]?.values?.map { it.document.text } ?: mutableListOf()
+
     private fun createBom(continuable: Boolean): MutableMap<String, Editor> =
         Creators.create(continuable, "BOM", tabbedPane) { showCallback ->
             var pumlContent: String? = null
@@ -99,7 +102,7 @@ class CodeCreatingToolWindowContent {
                 } ?: DumbService.getInstance(project).smartInvokeLater {
                     Messages.showInfoMessage("There were no DTOs generated.", "BOM Generating Error")
                 }
-            }?: DumbService.getInstance(project).smartInvokeLater {
+            } ?: DumbService.getInstance(project).smartInvokeLater {
                 Messages.showInfoMessage("No puml file was selected.", "BOM Generating Error")
             }
         }
@@ -107,17 +110,19 @@ class CodeCreatingToolWindowContent {
     private fun createDto(continuable: Boolean): MutableMap<String, Editor> =
         Creators.create(continuable, "DTO", tabbedPane) { showCallback ->
             if (generateEditors.containsKey(ElementType.BOM)) {
-                val editorTexts = generateEditors[ElementType.BOM]?.values?.map { it.document.text }
-                if (editorTexts != null) {
-                    Creators.createDto(editorTexts)?.let {
-                        showCallback(it)
-                    } ?: DumbService.getInstance(project).smartInvokeLater {
-                        Messages.showInfoMessage("There were no DTOs generated.", "DTO Generating Error")
-                    }
-                } else {
+                val editorTexts = getTextsFromEditors(ElementType.BOM)
+
+                if (editorTexts.isEmpty()) {
                     DumbService.getInstance(project).smartInvokeLater {
                         Messages.showInfoMessage("There were no BOMs generated.", "DTO Generating Error")
                     }
+                    return@create
+                }
+
+                Creators.createDto(editorTexts)?.let {
+                    showCallback(it)
+                } ?: DumbService.getInstance(project).smartInvokeLater {
+                    Messages.showInfoMessage("There were no DTOs generated.", "DTO Generating Error")
                 }
             } else {
                 var pumlContent: String? = null
@@ -132,6 +137,32 @@ class CodeCreatingToolWindowContent {
                         Messages.showInfoMessage("There were no DTOs generated.", "DTO Generating Error")
                     }
                 }
+            }
+        }
+
+    private fun createConverters(continuable: Boolean): MutableMap<String, Editor> =
+        Creators.create(continuable, "Converter", tabbedPane) { showCallback ->
+            if (!(generateEditors.contains(ElementType.BOM) || generateEditors.contains(ElementType.DTO))) {
+                DumbService.getInstance(project).smartInvokeLater {
+                    Messages.showInfoMessage("There were no BOMs and DTOs generated.", "Converter Generating Error")
+                }
+                return@create
+            }
+
+            val bomTexts = getTextsFromEditors(ElementType.BOM)
+            val dtoTexts = getTextsFromEditors(ElementType.DTO)
+
+            if (bomTexts.isEmpty() && dtoTexts.isEmpty()) {
+                DumbService.getInstance(project).smartInvokeLater {
+                    Messages.showInfoMessage("There were no BOMs generated.", "Converter Generating Error")
+                }
+                return@create
+            }
+
+            Creators.createConverters(bomTexts, dtoTexts)?.let {
+                showCallback(it)
+            } ?: DumbService.getInstance(project).smartInvokeLater {
+                Messages.showInfoMessage("There were no DTOs generated.", "Converter Generating Error")
             }
         }
 
@@ -154,7 +185,7 @@ class CodeCreatingToolWindowContent {
                     }
 
                     ElementType.CONVERTER -> {
-                        TODO()
+                        createConverters(continuable).let { generateEditors[elemToGenerate] = it }
                     }
                 }
 
