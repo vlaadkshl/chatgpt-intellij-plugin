@@ -2,6 +2,7 @@ package com.sytoss.aiHelper.ui
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBCheckBox
@@ -9,6 +10,7 @@ import com.intellij.ui.components.JBTabbedPane
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
+import com.sytoss.aiHelper.services.CommonFields.project
 import com.sytoss.aiHelper.services.codeCreating.Creators
 import com.sytoss.aiHelper.services.codeCreating.Creators.isNeedContinue
 import com.sytoss.aiHelper.ui.components.*
@@ -82,6 +84,7 @@ class CodeCreatingToolWindowContent {
         return true
     }
 
+    private val generateEditors = mutableMapOf<ElementType, MutableMap<String, Editor>>()
 
     private fun createBom(continuable: Boolean): MutableMap<String, Editor> =
         Creators.create(continuable, "BOM", tabbedPane) { showCallback ->
@@ -93,20 +96,41 @@ class CodeCreatingToolWindowContent {
             pumlContent?.let { puml ->
                 Creators.createBom(puml)?.let {
                     showCallback(it)
+                } ?: DumbService.getInstance(project).smartInvokeLater {
+                    Messages.showInfoMessage("There were no DTOs generated.", "BOM Generating Error")
                 }
+            }?: DumbService.getInstance(project).smartInvokeLater {
+                Messages.showInfoMessage("No puml file was selected.", "BOM Generating Error")
             }
         }
 
     private fun createDto(continuable: Boolean): MutableMap<String, Editor> =
         Creators.create(continuable, "DTO", tabbedPane) { showCallback ->
-            var pumlContent: String? = null
-            ApplicationManager.getApplication().invokeAndWait {
-                pumlContent = Files.readString(pumlChooser.selectedFiles[0].toNioPath())
-            }
+            if (generateEditors.containsKey(ElementType.BOM)) {
+                val editorTexts = generateEditors[ElementType.BOM]?.values?.map { it.document.text }
+                if (editorTexts != null) {
+                    Creators.createDto(editorTexts)?.let {
+                        showCallback(it)
+                    } ?: DumbService.getInstance(project).smartInvokeLater {
+                        Messages.showInfoMessage("There were no DTOs generated.", "DTO Generating Error")
+                    }
+                } else {
+                    DumbService.getInstance(project).smartInvokeLater {
+                        Messages.showInfoMessage("There were no BOMs generated.", "DTO Generating Error")
+                    }
+                }
+            } else {
+                var pumlContent: String? = null
+                ApplicationManager.getApplication().invokeAndWait {
+                    pumlContent = Files.readString(pumlChooser.selectedFiles[0].toNioPath())
+                }
 
-            pumlContent?.let { puml ->
-                Creators.createBom(puml)?.let {
-                    showCallback(it)
+                pumlContent?.let { puml ->
+                    Creators.createDto(puml)?.let {
+                        showCallback(it)
+                    } ?: DumbService.getInstance(project).smartInvokeLater {
+                        Messages.showInfoMessage("There were no DTOs generated.", "DTO Generating Error")
+                    }
                 }
             }
         }
@@ -114,31 +138,31 @@ class CodeCreatingToolWindowContent {
     private val generateBtn = JButtonWithListener("Generate Files") {
         if (!checkBeforeGenerating()) return@JButtonWithListener
 
+        generateEditors.clear()
         tabbedPane.removeAll()
-
         thread {
-            val result = mutableMapOf<ElementType, MutableMap<String, Editor>>()
-
             for (elemToGenerate in elemsToGenerate) {
+                val continuable = elemToGenerate != elemsToGenerate.last()
+
                 when (elemToGenerate) {
                     ElementType.BOM -> {
-                        createBom(true)
-                            .let { result[ElementType.BOM] = it }
-
-                        while (!isNeedContinue) {
-                            Thread.sleep(100)
-                        }
-
-                        isNeedContinue = false
+                        createBom(continuable).let { generateEditors[elemToGenerate] = it }
                     }
 
                     ElementType.DTO -> {
+                        createDto(continuable).let { generateEditors[elemToGenerate] = it }
                     }
 
                     ElementType.CONVERTER -> {
                         TODO()
                     }
                 }
+
+                while (!isNeedContinue) {
+                    Thread.sleep(100)
+                }
+
+                isNeedContinue = false
             }
         }
     }

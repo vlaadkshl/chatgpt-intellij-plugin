@@ -4,7 +4,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -12,7 +11,6 @@ import com.intellij.ui.components.JBTabbedPane
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.sytoss.aiHelper.bom.codeCreating.CreateRequest
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
-import com.sytoss.aiHelper.bom.codeCreating.ElementType
 import com.sytoss.aiHelper.bom.codeCreating.ModelType
 import com.sytoss.aiHelper.services.CommonFields.project
 import com.sytoss.aiHelper.services.UiBuilder
@@ -20,7 +18,7 @@ import com.sytoss.aiHelper.ui.components.DefaultConstraints
 import com.sytoss.aiHelper.ui.components.JButtonWithListener
 import java.awt.FlowLayout
 import java.awt.GridBagLayout
-import java.nio.file.Files
+import javax.swing.JButton
 import javax.swing.JPanel
 import javax.swing.SwingConstants
 
@@ -29,8 +27,9 @@ object Creators {
 
     var isNeedContinue = false
 
-    private fun needsContinue() {
+    private fun needsContinue(button: JButton) {
         isNeedContinue = true
+        button.isEnabled = false
     }
 
     fun create(
@@ -50,7 +49,7 @@ object Creators {
             innerPanelWrapper.add(innerPanel)
 
             val innerPanelBorder = BorderLayoutPanel()
-            val continueButton = JButtonWithListener("Continue") { needsContinue() }
+            val continueButton = JButtonWithListener("Continue") { needsContinue(it.source as JButton) }
             continueButton.isEnabled = false
             if (continuable) {
                 innerPanelBorder.addToTop(continueButton)
@@ -58,6 +57,9 @@ object Creators {
             innerPanelBorder.addToCenter(JBScrollPane(innerPanelWrapper))
 
             tabbedPane.addTab(name, innerPanelBorder)
+            ApplicationManager.getApplication().invokeAndWait {
+                tabbedPane.selectedComponent = innerPanelBorder
+            }
 
             callback {
                 ApplicationManager.getApplication().invokeAndWait {
@@ -74,52 +76,52 @@ object Creators {
         return editors
     }
 
-    private fun create(elemsToGenerate: Set<ElementType>, pumlFile: VirtualFile)
-            : Map<ElementType, List<CreateResponse.CreateContent>> {
-        val result = mutableMapOf<ElementType, List<CreateResponse.CreateContent>>()
-
-        if (elemsToGenerate.contains(ElementType.CONVERTER)
-            && (!elemsToGenerate.contains(ElementType.BOM) || !elemsToGenerate.contains(ElementType.DTO))
-        ) {
-            return result
-        }
-
-        val pumlContent = Files.readString(pumlFile.toNioPath())
-
-        if (elemsToGenerate.contains(ElementType.BOM)) {
-            val createdResponse = createBom(pumlContent)
-
-            if (createdResponse != null) {
-                result[ElementType.BOM] = createdResponse.result
-            }
-        }
-
-        if (elemsToGenerate.contains(ElementType.DTO)) {
-            val createdResponse =
-                if (result.containsKey(ElementType.BOM))
-                    result[ElementType.BOM]?.let { createDto(it) }
-                else
-                    createDto(pumlContent)
-
-            if (createdResponse != null) {
-                result[ElementType.DTO] = createdResponse.result
-            }
-        }
-
-        if (elemsToGenerate.contains(ElementType.CONVERTER)) {
-            result[ElementType.BOM]?.let { boms ->
-                result[ElementType.DTO]?.let { dtos ->
-                    val createdResponse = createConverters(boms, dtos)
-
-                    if (createdResponse != null) {
-                        result[ElementType.CONVERTER] = createdResponse.result
-                    }
-                }
-            }
-        }
-
-        return result
-    }
+//    private fun create(elemsToGenerate: Set<ElementType>, pumlFile: VirtualFile)
+//            : Map<ElementType, List<CreateResponse.CreateContent>> {
+//        val result = mutableMapOf<ElementType, List<CreateResponse.CreateContent>>()
+//
+//        if (elemsToGenerate.contains(ElementType.CONVERTER)
+//            && (!elemsToGenerate.contains(ElementType.BOM) || !elemsToGenerate.contains(ElementType.DTO))
+//        ) {
+//            return result
+//        }
+//
+//        val pumlContent = Files.readString(pumlFile.toNioPath())
+//
+//        if (elemsToGenerate.contains(ElementType.BOM)) {
+//            val createdResponse = createBom(pumlContent)
+//
+//            if (createdResponse != null) {
+//                result[ElementType.BOM] = createdResponse.result
+//            }
+//        }
+//
+//        if (elemsToGenerate.contains(ElementType.DTO)) {
+//            val createdResponse =
+//                if (result.containsKey(ElementType.BOM))
+//                    result[ElementType.BOM]?.let { createDto(it) }
+//                else
+//                    createDto(pumlContent)
+//
+//            if (createdResponse != null) {
+//                result[ElementType.DTO] = createdResponse.result
+//            }
+//        }
+//
+//        if (elemsToGenerate.contains(ElementType.CONVERTER)) {
+//            result[ElementType.BOM]?.let { boms ->
+//                result[ElementType.DTO]?.let { dtos ->
+//                    val createdResponse = createConverters(boms, dtos)
+//
+//                    if (createdResponse != null) {
+//                        result[ElementType.CONVERTER] = createdResponse.result
+//                    }
+//                }
+//            }
+//        }
+//
+//        return result
+//    }
 
     fun createBom(pumlContent: String): CreateResponse? {
         val request = CreateRequest(
@@ -151,12 +153,12 @@ object Creators {
         return RequestSender.sendRequest(request)
     }
 
-    fun createDto(bomElements: List<CreateResponse.CreateContent>): CreateResponse? {
+    fun createDto(bomElements: List<String>): CreateResponse? {
         val request = CreateRequest(
             model = ModelType.GPT,
             prompt = """
                     Write java classes for DTO according to the BOM classes below:
-                    ${bomElements.joinToString(separator = "\n") { it.body }}
+                    ${bomElements.joinToString(separator = "\n")}
                 """.trimIndent(),
             example = dtoExample
         )
