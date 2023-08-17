@@ -108,8 +108,10 @@ class CodeCreatingToolWindowContent(private val project: Project) {
             innerPanelWrapper.add(innerPanel)
 
             val innerPanelBorder = BorderLayoutPanel()
+            val continueButton = JButtonWithListener("Continue") { needsContinue() }
+            continueButton.isEnabled = false
             if (continuable) {
-                innerPanelBorder.addToTop(JButtonWithListener("Continue") { needsContinue() })
+                innerPanelBorder.addToTop(continueButton)
             }
             innerPanelBorder.addToCenter(JBScrollPane(innerPanelWrapper))
 
@@ -124,6 +126,7 @@ class CodeCreatingToolWindowContent(private val project: Project) {
                 Creators.createBom(puml)?.let {
                     ApplicationManager.getApplication().invokeAndWait {
                         UiBuilder.buildCreateClassesPanel(it, innerPanel, project, editors)
+                        continueButton.isEnabled = true
                     }
                 }
             }
