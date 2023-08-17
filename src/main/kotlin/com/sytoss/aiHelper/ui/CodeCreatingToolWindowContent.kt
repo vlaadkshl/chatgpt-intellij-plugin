@@ -1,8 +1,6 @@
 package com.sytoss.aiHelper.ui
 
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBCheckBox
@@ -11,7 +9,8 @@ import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
-import com.sytoss.aiHelper.services.CommonFields.project
+import com.sytoss.aiHelper.services.CommonFields.applicationManager
+import com.sytoss.aiHelper.services.CommonFields.dumbService
 import com.sytoss.aiHelper.services.codeCreating.Creators
 import com.sytoss.aiHelper.services.codeCreating.Creators.isNeedContinue
 import com.sytoss.aiHelper.ui.components.*
@@ -100,20 +99,20 @@ class CodeCreatingToolWindowContent {
 
     private fun createBom(showCallback: ((CreateResponse) -> Unit)) {
         var pumlContent: String? = null
-        ApplicationManager.getApplication().invokeAndWait {
+        applicationManager.invokeAndWait {
             pumlContent = Files.readString(pumlChooser.selectedFiles[0].toNioPath())
         }
 
         pumlContent?.let { puml ->
             Creators.createBom(puml)?.let {
                 showCallback(it)
-            } ?: DumbService.getInstance(project).smartInvokeLater {
+            } ?: dumbService.smartInvokeLater {
                 Messages.showInfoMessage(
                     "There were no DTOs generated.",
                     "${ElementType.BOM.value} Generating Error"
                 )
             }
-        } ?: DumbService.getInstance(project).smartInvokeLater {
+        } ?: dumbService.smartInvokeLater {
             Messages.showInfoMessage("No puml file was selected.", "${ElementType.BOM.value} Generating Error")
         }
 
@@ -124,7 +123,7 @@ class CodeCreatingToolWindowContent {
             val editorTexts = getTextsFromEditors(ElementType.BOM)
 
             if (editorTexts.isEmpty()) {
-                DumbService.getInstance(project).smartInvokeLater {
+                dumbService.smartInvokeLater {
                     Messages.showInfoMessage(
                         "There were no BOMs generated.",
                         "${ElementType.DTO.value} Generating Error"
@@ -135,7 +134,7 @@ class CodeCreatingToolWindowContent {
 
             Creators.createDto(editorTexts)?.let {
                 showCallback(it)
-            } ?: DumbService.getInstance(project).smartInvokeLater {
+            } ?: dumbService.smartInvokeLater {
                 Messages.showInfoMessage(
                     "There were no DTOs generated.",
                     "${ElementType.DTO.value} Generating Error"
@@ -143,14 +142,14 @@ class CodeCreatingToolWindowContent {
             }
         } else {
             var pumlContent: String? = null
-            ApplicationManager.getApplication().invokeAndWait {
+            applicationManager.invokeAndWait {
                 pumlContent = Files.readString(pumlChooser.selectedFiles[0].toNioPath())
             }
 
             pumlContent?.let { puml ->
                 Creators.createDto(puml)?.let {
                     showCallback(it)
-                } ?: DumbService.getInstance(project).smartInvokeLater {
+                } ?: dumbService.smartInvokeLater {
                     Messages.showInfoMessage(
                         "There were no DTOs generated.",
                         "${ElementType.DTO.value} Generating Error"
@@ -162,7 +161,7 @@ class CodeCreatingToolWindowContent {
 
     private fun createConverters(showCallback: ((CreateResponse) -> Unit)) {
         if (!(generateEditors.contains(ElementType.BOM) || generateEditors.contains(ElementType.DTO))) {
-            DumbService.getInstance(project).smartInvokeLater {
+            dumbService.smartInvokeLater {
                 Messages.showInfoMessage(
                     "There were no BOMs and DTOs generated.",
                     "${ElementType.CONVERTER.value} Generating Error"
@@ -175,7 +174,7 @@ class CodeCreatingToolWindowContent {
         val dtoTexts = getTextsFromEditors(ElementType.DTO)
 
         if (bomTexts.isEmpty() && dtoTexts.isEmpty()) {
-            DumbService.getInstance(project).smartInvokeLater {
+            dumbService.smartInvokeLater {
                 Messages.showInfoMessage(
                     "There were no BOMs generated.",
                     "${ElementType.CONVERTER.value} Generating Error"
@@ -186,7 +185,7 @@ class CodeCreatingToolWindowContent {
 
         Creators.createConverters(bomTexts, dtoTexts)?.let {
             showCallback(it)
-        } ?: DumbService.getInstance(project).smartInvokeLater {
+        } ?: dumbService.smartInvokeLater {
             Messages.showInfoMessage(
                 "There were no DTOs generated.",
                 "${ElementType.CONVERTER.value} Generating Error"

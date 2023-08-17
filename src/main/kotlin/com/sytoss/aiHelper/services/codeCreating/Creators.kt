@@ -1,8 +1,6 @@
 package com.sytoss.aiHelper.services.codeCreating
 
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.components.JBLabel
@@ -12,7 +10,8 @@ import com.intellij.util.ui.components.BorderLayoutPanel
 import com.sytoss.aiHelper.bom.codeCreating.CreateRequest
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.ModelType
-import com.sytoss.aiHelper.services.CommonFields.project
+import com.sytoss.aiHelper.services.CommonFields.applicationManager
+import com.sytoss.aiHelper.services.CommonFields.dumbService
 import com.sytoss.aiHelper.services.UiBuilder
 import com.sytoss.aiHelper.ui.components.DefaultConstraints
 import com.sytoss.aiHelper.ui.components.JButtonWithListener
@@ -23,8 +22,6 @@ import javax.swing.JPanel
 import javax.swing.SwingConstants
 
 object Creators {
-    private val dumbService = DumbService.getInstance(project)
-
     var isNeedContinue = false
 
     private fun needsContinue(button: JButton) {
@@ -56,13 +53,13 @@ object Creators {
             }
             tabComponent.addToCenter(JBScrollPane(innerPanelWrapper))
 
-            ApplicationManager.getApplication().invokeAndWait {
+            applicationManager.invokeAndWait {
                 tabbedPane.setEnabledAt(componentIndex, true)
                 tabbedPane.selectedComponent = tabComponent
             }
 
             callback {
-                ApplicationManager.getApplication().invokeAndWait {
+                applicationManager.invokeAndWait {
                     editors.putAll(UiBuilder.buildCreateClassesPanel(it, innerPanel))
                     continueButton.isEnabled = true
                 }

@@ -1,9 +1,9 @@
 package com.sytoss.aiHelper.services.codeCreating
 
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ui.Messages
 import com.sytoss.aiHelper.bom.codeCreating.CreateRequest
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
+import com.sytoss.aiHelper.services.CommonFields.applicationManager
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -33,7 +33,7 @@ object RequestSender {
             val httpResponse = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString())
             return json.decodeFromString<CreateResponse>(httpResponse.body())
         } catch (e: Exception) {
-            ApplicationManager.getApplication().invokeLater {
+            applicationManager.invokeLater {
                 when {
                     e is SocketTimeoutException -> Messages.showErrorDialog(
                         "Timeout. Try again.",

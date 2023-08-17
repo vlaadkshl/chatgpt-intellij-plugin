@@ -2,6 +2,7 @@ package com.sytoss.aiHelper.ui
 
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.DumbAware
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
@@ -13,6 +14,7 @@ class PluginToolWindowFactory : ToolWindowFactory, DumbAware {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         CommonFields.project = project
+        CommonFields.dumbService = DumbService.getInstance(project)
 
         PackageFinder.module = ModuleManager.getInstance(project).modules[0]
 
