@@ -9,6 +9,7 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBTabbedPane
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.components.BorderLayoutPanel
+import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
 import com.sytoss.aiHelper.services.CommonFields.project
 import com.sytoss.aiHelper.services.codeCreating.Creators
@@ -39,7 +40,7 @@ class CodeCreatingToolWindowContent {
 
     private fun isConverterNeedsEnabling() = isBomCheckboxSelected && isDtoCheckboxSelected
 
-    private val converterCheckBox = JBCheckBoxWithListener("Converter") {
+    private val converterCheckBox = JBCheckBoxWithListener(ElementType.CONVERTER.value) {
         val source = it.source as JBCheckBox
         if (source.isSelected && source.isEnabled) {
             elemsToGenerate.add(ElementType.CONVERTER)
@@ -48,7 +49,7 @@ class CodeCreatingToolWindowContent {
         }
     }
 
-    private val bomCheckBox = JBCheckBoxWithListener("BOM") {
+    private val bomCheckBox = JBCheckBoxWithListener(ElementType.BOM.value) {
         isBomCheckboxSelected = (it.source as JBCheckBox).isSelected
 
         converterCheckBox.isEnabled = isConverterNeedsEnabling()
@@ -60,7 +61,7 @@ class CodeCreatingToolWindowContent {
         }
     }
 
-    private val dtoCheckBox = JBCheckBoxWithListener("DTO") {
+    private val dtoCheckBox = JBCheckBoxWithListener(ElementType.DTO.value) {
         isDtoCheckboxSelected = (it.source as JBCheckBox).isSelected
 
         converterCheckBox.isEnabled = isConverterNeedsEnabling()
@@ -89,104 +90,140 @@ class CodeCreatingToolWindowContent {
     private fun getTextsFromEditors(elementType: ElementType): List<String> =
         generateEditors[elementType]?.values?.map { it.document.text } ?: mutableListOf()
 
-    private fun createBom(continuable: Boolean): MutableMap<String, Editor> =
-        Creators.create(continuable, "BOM", tabbedPane) { showCallback ->
+    private fun createElements(
+        continuable: Boolean,
+        tabComponent: BorderLayoutPanel,
+        componentIndex: Int,
+        callback: ((CreateResponse) -> Unit) -> Unit
+    ): MutableMap<String, Editor> =
+        Creators.create(continuable, tabbedPane, tabComponent, componentIndex) { callback(it) }
+
+    private fun createBom(showCallback: ((CreateResponse) -> Unit)) {
+        var pumlContent: String? = null
+        ApplicationManager.getApplication().invokeAndWait {
+            pumlContent = Files.readString(pumlChooser.selectedFiles[0].toNioPath())
+        }
+
+        pumlContent?.let { puml ->
+            Creators.createBom(puml)?.let {
+                showCallback(it)
+            } ?: DumbService.getInstance(project).smartInvokeLater {
+                Messages.showInfoMessage(
+                    "There were no DTOs generated.",
+                    "${ElementType.BOM.value} Generating Error"
+                )
+            }
+        } ?: DumbService.getInstance(project).smartInvokeLater {
+            Messages.showInfoMessage("No puml file was selected.", "${ElementType.BOM.value} Generating Error")
+        }
+
+    }
+
+    private fun createDto(showCallback: ((CreateResponse) -> Unit)) {
+        if (generateEditors.containsKey(ElementType.BOM)) {
+            val editorTexts = getTextsFromEditors(ElementType.BOM)
+
+            if (editorTexts.isEmpty()) {
+                DumbService.getInstance(project).smartInvokeLater {
+                    Messages.showInfoMessage(
+                        "There were no BOMs generated.",
+                        "${ElementType.DTO.value} Generating Error"
+                    )
+                }
+                return
+            }
+
+            Creators.createDto(editorTexts)?.let {
+                showCallback(it)
+            } ?: DumbService.getInstance(project).smartInvokeLater {
+                Messages.showInfoMessage(
+                    "There were no DTOs generated.",
+                    "${ElementType.DTO.value} Generating Error"
+                )
+            }
+        } else {
             var pumlContent: String? = null
             ApplicationManager.getApplication().invokeAndWait {
                 pumlContent = Files.readString(pumlChooser.selectedFiles[0].toNioPath())
             }
 
             pumlContent?.let { puml ->
-                Creators.createBom(puml)?.let {
+                Creators.createDto(puml)?.let {
                     showCallback(it)
                 } ?: DumbService.getInstance(project).smartInvokeLater {
-                    Messages.showInfoMessage("There were no DTOs generated.", "BOM Generating Error")
-                }
-            } ?: DumbService.getInstance(project).smartInvokeLater {
-                Messages.showInfoMessage("No puml file was selected.", "BOM Generating Error")
-            }
-        }
-
-    private fun createDto(continuable: Boolean): MutableMap<String, Editor> =
-        Creators.create(continuable, "DTO", tabbedPane) { showCallback ->
-            if (generateEditors.containsKey(ElementType.BOM)) {
-                val editorTexts = getTextsFromEditors(ElementType.BOM)
-
-                if (editorTexts.isEmpty()) {
-                    DumbService.getInstance(project).smartInvokeLater {
-                        Messages.showInfoMessage("There were no BOMs generated.", "DTO Generating Error")
-                    }
-                    return@create
-                }
-
-                Creators.createDto(editorTexts)?.let {
-                    showCallback(it)
-                } ?: DumbService.getInstance(project).smartInvokeLater {
-                    Messages.showInfoMessage("There were no DTOs generated.", "DTO Generating Error")
-                }
-            } else {
-                var pumlContent: String? = null
-                ApplicationManager.getApplication().invokeAndWait {
-                    pumlContent = Files.readString(pumlChooser.selectedFiles[0].toNioPath())
-                }
-
-                pumlContent?.let { puml ->
-                    Creators.createDto(puml)?.let {
-                        showCallback(it)
-                    } ?: DumbService.getInstance(project).smartInvokeLater {
-                        Messages.showInfoMessage("There were no DTOs generated.", "DTO Generating Error")
-                    }
+                    Messages.showInfoMessage(
+                        "There were no DTOs generated.",
+                        "${ElementType.DTO.value} Generating Error"
+                    )
                 }
             }
         }
+    }
 
-    private fun createConverters(continuable: Boolean): MutableMap<String, Editor> =
-        Creators.create(continuable, "Converter", tabbedPane) { showCallback ->
-            if (!(generateEditors.contains(ElementType.BOM) || generateEditors.contains(ElementType.DTO))) {
-                DumbService.getInstance(project).smartInvokeLater {
-                    Messages.showInfoMessage("There were no BOMs and DTOs generated.", "Converter Generating Error")
-                }
-                return@create
+    private fun createConverters(showCallback: ((CreateResponse) -> Unit)) {
+        if (!(generateEditors.contains(ElementType.BOM) || generateEditors.contains(ElementType.DTO))) {
+            DumbService.getInstance(project).smartInvokeLater {
+                Messages.showInfoMessage(
+                    "There were no BOMs and DTOs generated.",
+                    "${ElementType.CONVERTER.value} Generating Error"
+                )
             }
-
-            val bomTexts = getTextsFromEditors(ElementType.BOM)
-            val dtoTexts = getTextsFromEditors(ElementType.DTO)
-
-            if (bomTexts.isEmpty() && dtoTexts.isEmpty()) {
-                DumbService.getInstance(project).smartInvokeLater {
-                    Messages.showInfoMessage("There were no BOMs generated.", "Converter Generating Error")
-                }
-                return@create
-            }
-
-            Creators.createConverters(bomTexts, dtoTexts)?.let {
-                showCallback(it)
-            } ?: DumbService.getInstance(project).smartInvokeLater {
-                Messages.showInfoMessage("There were no DTOs generated.", "Converter Generating Error")
-            }
+            return
         }
+
+        val bomTexts = getTextsFromEditors(ElementType.BOM)
+        val dtoTexts = getTextsFromEditors(ElementType.DTO)
+
+        if (bomTexts.isEmpty() && dtoTexts.isEmpty()) {
+            DumbService.getInstance(project).smartInvokeLater {
+                Messages.showInfoMessage(
+                    "There were no BOMs generated.",
+                    "${ElementType.CONVERTER.value} Generating Error"
+                )
+            }
+            return
+        }
+
+        Creators.createConverters(bomTexts, dtoTexts)?.let {
+            showCallback(it)
+        } ?: DumbService.getInstance(project).smartInvokeLater {
+            Messages.showInfoMessage(
+                "There were no DTOs generated.",
+                "${ElementType.CONVERTER.value} Generating Error"
+            )
+        }
+    }
 
     private val generateBtn = JButtonWithListener("Generate Files") {
         if (!checkBeforeGenerating()) return@JButtonWithListener
 
         generateEditors.clear()
         tabbedPane.removeAll()
+
+        val tabComponents = mutableListOf<Pair<ElementType, BorderLayoutPanel>>()
+        var i = 0
+        elemsToGenerate.forEach {
+            tabComponents.add(Pair(it, BorderLayoutPanel()))
+            tabbedPane.addTab(it.value, tabComponents[i].second)
+            tabbedPane.setEnabledAt(i, false)
+            i++
+        }
+
         thread {
             for (elemToGenerate in elemsToGenerate) {
                 val continuable = elemToGenerate != elemsToGenerate.last()
 
-                when (elemToGenerate) {
-                    ElementType.BOM -> {
-                        createBom(continuable).let { generateEditors[elemToGenerate] = it }
-                    }
+                val component = tabComponents.find { it.first == elemToGenerate } ?: continue
+                val componentIndex = tabComponents.indexOf(component)
 
-                    ElementType.DTO -> {
-                        createDto(continuable).let { generateEditors[elemToGenerate] = it }
+                createElements(continuable, component.second, componentIndex) {
+                    when (elemToGenerate) {
+                        ElementType.BOM -> createBom(it)
+                        ElementType.DTO -> createDto(it)
+                        ElementType.CONVERTER -> createConverters(it)
                     }
-
-                    ElementType.CONVERTER -> {
-                        createConverters(continuable).let { generateEditors[elemToGenerate] = it }
-                    }
+                }.let {
+                    generateEditors[elemToGenerate] = it
                 }
 
                 while (!isNeedContinue) {

@@ -34,8 +34,9 @@ object Creators {
 
     fun create(
         continuable: Boolean,
-        name: String,
         tabbedPane: JBTabbedPane,
+        tabComponent: BorderLayoutPanel,
+        componentIndex: Int,
         callback: ((CreateResponse) -> Unit) -> Unit
     ): MutableMap<String, Editor> {
         val editors = mutableMapOf<String, Editor>()
@@ -48,17 +49,16 @@ object Creators {
             val innerPanelWrapper = JPanel(FlowLayout(FlowLayout.LEFT))
             innerPanelWrapper.add(innerPanel)
 
-            val innerPanelBorder = BorderLayoutPanel()
             val continueButton = JButtonWithListener("Continue") { needsContinue(it.source as JButton) }
             continueButton.isEnabled = false
             if (continuable) {
-                innerPanelBorder.addToTop(continueButton)
+                tabComponent.addToTop(continueButton)
             }
-            innerPanelBorder.addToCenter(JBScrollPane(innerPanelWrapper))
+            tabComponent.addToCenter(JBScrollPane(innerPanelWrapper))
 
-            tabbedPane.addTab(name, innerPanelBorder)
             ApplicationManager.getApplication().invokeAndWait {
-                tabbedPane.selectedComponent = innerPanelBorder
+                tabbedPane.setEnabledAt(componentIndex, true)
+                tabbedPane.selectedComponent = tabComponent
             }
 
             callback {
