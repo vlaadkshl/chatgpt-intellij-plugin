@@ -1,15 +1,16 @@
 package com.sytoss.aiHelper.services
 
 import com.intellij.ide.highlighter.JavaClassFileType
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.project.Project
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.sytoss.aiHelper.bom.chat.pyramid.result.PyramidAnalysisContent
 import com.sytoss.aiHelper.bom.chat.pyramid.result.PyramidAnalysisGroup
 import com.sytoss.aiHelper.bom.chat.warnings.ClassGroup
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
+import com.sytoss.aiHelper.services.CommonFields.project
 import com.sytoss.aiHelper.services.chat.CodeCheckingService
 import com.sytoss.aiHelper.services.chat.PyramidCheckingService
 import com.sytoss.aiHelper.ui.components.DefaultConstraints
@@ -22,8 +23,13 @@ import javax.swing.JPanel
 
 object UiBuilder {
 
-    fun buildCreateClassesPanel(response: List<CreateResponse.CreateContent>, parent: JPanel, project: Project) {
-        for (createdClass in response) {
+    fun buildCreateClassesPanel(
+        response: CreateResponse,
+        parent: JPanel
+    ): MutableMap<String, Editor> {
+        val editors = mutableMapOf<String, Editor>()
+
+        for (createdClass in response.result) {
             val classPanel = JPanel(GridBagLayout())
 
             val document = EditorFactory.getInstance().createDocument(createdClass.body)
@@ -45,10 +51,13 @@ object UiBuilder {
             classPanel.add(editorPane.component, DefaultConstraints.topLeftColumn)
 
             parent.add(classPanel, DefaultConstraints.topLeftColumn)
+            editors[createdClass.fileName] = editorPane
         }
+
+        return editors
     }
 
-    fun buildPyramidReportPanel(report: List<PyramidAnalysisGroup>, project: Project): JPanel {
+    fun buildPyramidReportPanel(report: List<PyramidAnalysisGroup>): JPanel {
         val panel = JPanel(GridBagLayout())
 
         if (report.isEmpty()) {
@@ -57,7 +66,7 @@ object UiBuilder {
             for (classGroup in report) {
                 val classPanel = JPanel(GridBagLayout())
 
-                val file = PyramidCheckingService.getClassVirtualFile(classGroup, project)
+                val file = PyramidCheckingService.getClassVirtualFile(classGroup)
 
                 if (file != null) {
                     classPanel.add(ActionLink(classGroup.className) {
@@ -89,7 +98,7 @@ object UiBuilder {
         return panel
     }
 
-    fun buildCheckingReportPanel(report: List<ClassGroup>, project: Project): JPanel {
+    fun buildCheckingReportPanel(report: List<ClassGroup>): JPanel {
         val panel = JPanel(GridBagLayout())
 
         if (report.isEmpty()) {
@@ -98,7 +107,7 @@ object UiBuilder {
             for (classGroup in report) {
                 val classPanel = JPanel(GridBagLayout())
 
-                val file = CodeCheckingService.getClassVirtualFile(classGroup, project)
+                val file = CodeCheckingService.getClassVirtualFile(classGroup)
 
                 if (file != null) {
                     classPanel.add(ActionLink(classGroup.className) {

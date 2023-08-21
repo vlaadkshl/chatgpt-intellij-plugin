@@ -4,17 +4,17 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.dsl.builder.panel
+import com.sytoss.aiHelper.services.CommonFields.project
 import java.awt.FlowLayout
 import java.nio.file.Files
 import javax.swing.JComponent
 import javax.swing.JPanel
 
-class FileChooserCreateComponent(text: String, project: Project) : JPanel(FlowLayout(FlowLayout.LEFT)) {
+class FileChooserCreateComponent(text: String) : JPanel(FlowLayout(FlowLayout.LEFT)) {
     val selectedFiles = mutableListOf<VirtualFile>()
 
     private var descriptor = FileChooserDescriptorFactory.createSingleFileDescriptor()
@@ -22,8 +22,7 @@ class FileChooserCreateComponent(text: String, project: Project) : JPanel(FlowLa
     constructor(
         text: String,
         extension: String,
-        project: Project
-    ) : this(text, project) {
+    ) : this(text) {
         this.descriptor = FileChooserDescriptorFactory.createSingleFileDescriptor(extension)
     }
 
