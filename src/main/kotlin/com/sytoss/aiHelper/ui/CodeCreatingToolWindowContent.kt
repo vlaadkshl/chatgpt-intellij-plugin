@@ -95,7 +95,12 @@ class CodeCreatingToolWindowContent {
         componentIndex: Int,
         callback: ((CreateResponse) -> Unit) -> Unit
     ): MutableMap<String, Editor> =
-        Creators.create(continuable, tabbedPane, tabComponent, componentIndex) { callback(it) }
+        Creators.create(
+            continuable,
+            tabbedPane,
+            tabComponent,
+            componentIndex
+        ) { showCallback -> callback(showCallback) }
 
     private fun createBom(showCallback: ((CreateResponse) -> Unit)) {
         var pumlContent: String? = null
@@ -193,13 +198,42 @@ class CodeCreatingToolWindowContent {
         }
     }
 
+    private val tabComponents = mutableListOf<Pair<ElementType, BorderLayoutPanel>>()
+
+    private fun generate(elemToGenerate: ElementType) {
+        val continuable = elemToGenerate != elemsToGenerate.last()
+
+        val component = tabComponents.find { it.first == elemToGenerate } ?: return
+        val componentIndex = tabComponents.indexOf(component)
+
+        createElements(
+            continuable,
+            tabComponent = component.second,
+            componentIndex
+        ) { showCallback ->
+            when (elemToGenerate) {
+                ElementType.BOM -> createBom(showCallback)
+                ElementType.DTO -> createDto(showCallback)
+                ElementType.CONVERTER -> createConverters(showCallback)
+            }
+        }.let {
+            generateEditors[elemToGenerate] = it
+        }
+
+        while (!isNeedContinue) {
+            Thread.sleep(100)
+        }
+
+        isNeedContinue = false
+    }
+
+
     private val generateBtn = JButtonWithListener("Generate Files") {
         if (!checkBeforeGenerating()) return@JButtonWithListener
 
         generateEditors.clear()
         tabbedPane.removeAll()
 
-        val tabComponents = mutableListOf<Pair<ElementType, BorderLayoutPanel>>()
         var i = 0
         elemsToGenerate.forEach {
             tabComponents.add(Pair(it, BorderLayoutPanel()))
@@ -209,28 +243,7 @@ class CodeCreatingToolWindowContent {
         }
 
         thread {
-            for (elemToGenerate in elemsToGenerate) {
-                val continuable = elemToGenerate != elemsToGenerate.last()
-
-                val component = tabComponents.find { it.first == elemToGenerate } ?: continue
-                val componentIndex = tabComponents.indexOf(component)
-
-                createElements(continuable, component.second, componentIndex) {
-                    when (elemToGenerate) {
-                        ElementType.BOM -> createBom(it)
-                        ElementType.DTO -> createDto(it)
-                        ElementType.CONVERTER -> createConverters(it)
-                    }
-                }.let {
-                    generateEditors[elemToGenerate] = it
-                }
-
-                while (!isNeedContinue) {
-                    Thread.sleep(100)
-                }
-
-                isNeedContinue = false
-            }
+            elemsToGenerate.forEach { generate(it) }
         }
     }
 

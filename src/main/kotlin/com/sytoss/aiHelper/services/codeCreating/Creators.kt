@@ -17,9 +17,11 @@ import com.sytoss.aiHelper.ui.components.DefaultConstraints
 import com.sytoss.aiHelper.ui.components.JButtonWithListener
 import java.awt.FlowLayout
 import java.awt.GridBagLayout
+import javax.swing.BorderFactory.createEmptyBorder
 import javax.swing.JButton
 import javax.swing.JPanel
 import javax.swing.SwingConstants
+import kotlin.concurrent.thread
 
 object Creators {
     var isNeedContinue = false
@@ -28,6 +30,10 @@ object Creators {
         isNeedContinue = true
         button.isEnabled = false
     }
+
+    private lateinit var retryButton: JButtonWithListener
+
+    private lateinit var editorsResultMap: MutableMap<String, Editor>
 
     fun create(
         continuable: Boolean,
@@ -46,31 +52,83 @@ object Creators {
             val innerPanelWrapper = JPanel(FlowLayout(FlowLayout.LEFT))
             innerPanelWrapper.add(innerPanel)
 
+            val innerPanelScrollable = JBScrollPane(innerPanelWrapper)
+            innerPanelScrollable.border = createEmptyBorder()
+
             val continueButton = JButtonWithListener("Continue") { needsContinue(it.source as JButton) }
             continueButton.isEnabled = false
-            if (continuable) {
-                tabComponent.addToTop(continueButton)
+
+            retryButton = JButtonWithListener("Retry") {
+                thread {
+                    retryFun(callback, editors, innerPanel, continueButton, loadingLabel)
+                }
             }
-            tabComponent.addToCenter(JBScrollPane(innerPanelWrapper))
+            retryButton.isEnabled = false
+
+            val buttonsGroup = JPanel(FlowLayout(FlowLayout.LEFT))
+            if (continuable) {
+                buttonsGroup.add(continueButton)
+            }
+            buttonsGroup.add(retryButton)
+
+            tabComponent.addToTop(buttonsGroup)
+            tabComponent.addToCenter(innerPanelScrollable)
 
             applicationManager.invokeAndWait {
                 tabbedPane.setEnabledAt(componentIndex, true)
                 tabbedPane.selectedComponent = tabComponent
             }
 
-            callback {
+            callback { response ->
                 applicationManager.invokeAndWait {
-                    editors.putAll(UiBuilder.buildCreateClassesPanel(it, innerPanel))
+                    editorsResultMap = UiBuilder.buildCreateClassesPanel(response, innerPanel)
+                    editors.putAll(editorsResultMap)
                     continueButton.isEnabled = true
                 }
             }
         } catch (e: Throwable) {
             dumbService.smartInvokeLater { Messages.showErrorDialog(e.message, "Error") }
         } finally {
-            dumbService.smartInvokeLater { loadingLabel.isVisible = false }
+            dumbService.smartInvokeLater {
+                loadingLabel.isVisible = false
+                retryButton.isEnabled = true
+            }
         }
 
         return editors
+    }
+
+    private fun retryFun(
+        callback: ((CreateResponse) -> Unit) -> Unit,
+        editors: MutableMap<String, Editor>,
+        innerPanel: JPanel,
+        continueButton: JButtonWithListener,
+        loadingLabel: JBLabel
+    ) {
+        try {
+            dumbService.smartInvokeLater {
+                loadingLabel.isVisible = true
+                innerPanel.isVisible = false
+            }
+
+            callback { response ->
+                applicationManager.invokeAndWait {
+                    editorsResultMap.keys.forEach { editors.remove(it) }
+                    innerPanel.removeAll()
+                    innerPanel.isVisible = true
+
+                    editors.putAll(UiBuilder.buildCreateClassesPanel(response, innerPanel))
+                    continueButton.isEnabled = true
+                }
+            }
+        } catch (e: Throwable) {
+            dumbService.smartInvokeLater { Messages.showErrorDialog(e.message, "Error") }
+        } finally {
+            dumbService.smartInvokeLater {
+                loadingLabel.isVisible = false
+                retryButton.isEnabled = true
+            }
+        }
     }
 
     fun createBom(pumlContent: String): CreateResponse? {
@@ -120,12 +178,12 @@ object Creators {
         val request = CreateRequest(
             model = ModelType.GPT,
             prompt = """
-                    Write java classes for Converters from BOM to DTO and vice versa according to the classes below:
+                    Create Converter classes from BOM to DTO and vice versa according to the classes below:
                     
-                    BOM:
+                    BOMs:
                     ${boms.joinToString(separator = "\n\n")}
                     
-                    DTO:
+                    DTOs:
                     ${dtos.joinToString(separator = "\n\n")}
                 """.trimIndent(),
             example = converterExample
@@ -241,8 +299,6 @@ object Creators {
     private val converterExample = """
         BookConverter:
         ```java
-        package com.sytoss.edu.library.converters;
-
         import com.sytoss.edu.library.bom.Author;
         import com.sytoss.edu.library.bom.Book;
         import com.sytoss.edu.library.dto.AuthorDTO;
