@@ -35,6 +35,8 @@ object CodeCreatingService {
 
     private lateinit var editorsResultMap: MutableMap<String, Editor>
 
+    private val editors = mutableMapOf<String, Editor>()
+
     fun create(
         continuable: Boolean,
         tabbedPane: JBTabbedPane,
@@ -42,43 +44,15 @@ object CodeCreatingService {
         componentIndex: Int,
         generateFun: ((CreateResponse) -> Unit) -> Unit
     ): MutableMap<String, Editor> {
-        val editors = mutableMapOf<String, Editor>()
+        val (loadingLabel, innerPanel, continueButton) = fillTabComponent(
+            tabComponent,
+            componentIndex,
+            generateFun,
+            continuable,
+            tabbedPane
+        )
 
-        val loadingLabel = JBLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
         try {
-            val innerPanel = JPanel(GridBagLayout())
-            innerPanel.add(loadingLabel, DefaultConstraints.topLeftColumn)
-
-            val innerPanelWrapper = JPanel(FlowLayout(FlowLayout.LEFT))
-            innerPanelWrapper.add(innerPanel)
-
-            val innerPanelScrollable = JBScrollPane(innerPanelWrapper)
-            innerPanelScrollable.border = createEmptyBorder()
-
-            val continueButton = JButtonWithListener("Continue") { needsContinue(it.source as JButton) }
-            continueButton.isEnabled = false
-
-            retryButton = JButtonWithListener("Retry") {
-                thread {
-                    retryFun(generateFun, editors, innerPanel, continueButton, loadingLabel)
-                }
-            }
-            retryButton.isEnabled = false
-
-            val buttonsGroup = JPanel(FlowLayout(FlowLayout.LEFT))
-            if (continuable) {
-                buttonsGroup.add(continueButton)
-            }
-            buttonsGroup.add(retryButton)
-
-            tabComponent.addToTop(buttonsGroup)
-            tabComponent.addToCenter(innerPanelScrollable)
-
-            applicationManager.invokeAndWait {
-                tabbedPane.setEnabledAt(componentIndex, true)
-                tabbedPane.selectedComponent = tabComponent
-            }
-
             generateFun { response ->
                 applicationManager.invokeAndWait {
                     editorsResultMap = UiBuilder.buildCreateClassesPanel(response, innerPanel)
@@ -98,9 +72,52 @@ object CodeCreatingService {
         return editors
     }
 
+    private fun fillTabComponent(
+        tabComponent: BorderLayoutPanel,
+        componentIndex: Int,
+        generateFun: ((CreateResponse) -> Unit) -> Unit,
+        continuable: Boolean,
+        tabbedPane: JBTabbedPane
+    ): Triple<JBLabel, JPanel, JButtonWithListener> {
+        val loadingLabel = JBLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
+
+        val innerPanel = JPanel(GridBagLayout())
+        innerPanel.add(loadingLabel, DefaultConstraints.topLeftColumn)
+
+        val innerPanelWrapper = JPanel(FlowLayout(FlowLayout.LEFT))
+        innerPanelWrapper.add(innerPanel)
+
+        val innerPanelScrollable = JBScrollPane(innerPanelWrapper)
+        innerPanelScrollable.border = createEmptyBorder()
+
+        val continueButton = JButtonWithListener("Continue") { needsContinue(it.source as JButton) }
+        continueButton.isEnabled = false
+
+        retryButton = JButtonWithListener("Retry") {
+            thread {
+                retryFun(generateFun, innerPanel, continueButton, loadingLabel)
+            }
+        }
+        retryButton.isEnabled = false
+
+        val buttonsGroup = JPanel(FlowLayout(FlowLayout.LEFT))
+        if (continuable) {
+            buttonsGroup.add(continueButton)
+        }
+        buttonsGroup.add(retryButton)
+
+        tabComponent.addToTop(buttonsGroup)
+        tabComponent.addToCenter(innerPanelScrollable)
+
+        applicationManager.invokeAndWait {
+            tabbedPane.setEnabledAt(componentIndex, true)
+            tabbedPane.selectedComponent = tabComponent
+        }
+        return Triple(loadingLabel, innerPanel, continueButton)
+    }
+
     private fun retryFun(
         generateFun: ((CreateResponse) -> Unit) -> Unit,
-        editors: MutableMap<String, Editor>,
         innerPanel: JPanel,
         continueButton: JButtonWithListener,
         loadingLabel: JBLabel
