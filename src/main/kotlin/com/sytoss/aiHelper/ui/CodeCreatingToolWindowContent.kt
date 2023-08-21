@@ -93,14 +93,14 @@ class CodeCreatingToolWindowContent {
         continuable: Boolean,
         tabComponent: BorderLayoutPanel,
         componentIndex: Int,
-        callback: ((CreateResponse) -> Unit) -> Unit
+        generateFun: ((CreateResponse) -> Unit) -> Unit
     ): MutableMap<String, Editor> =
         Creators.create(
             continuable,
             tabbedPane,
             tabComponent,
             componentIndex
-        ) { showCallback -> callback(showCallback) }
+        ) { showCallback -> generateFun(showCallback) }
 
     private fun createBom(showCallback: ((CreateResponse) -> Unit)) {
         var pumlContent: String? = null

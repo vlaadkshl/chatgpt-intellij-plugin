@@ -40,7 +40,7 @@ object Creators {
         tabbedPane: JBTabbedPane,
         tabComponent: BorderLayoutPanel,
         componentIndex: Int,
-        callback: ((CreateResponse) -> Unit) -> Unit
+        generateFun: ((CreateResponse) -> Unit) -> Unit
     ): MutableMap<String, Editor> {
         val editors = mutableMapOf<String, Editor>()
 
@@ -60,7 +60,7 @@ object Creators {
 
             retryButton = JButtonWithListener("Retry") {
                 thread {
-                    retryFun(callback, editors, innerPanel, continueButton, loadingLabel)
+                    retryFun(generateFun, editors, innerPanel, continueButton, loadingLabel)
                 }
             }
             retryButton.isEnabled = false
@@ -79,7 +79,7 @@ object Creators {
                 tabbedPane.selectedComponent = tabComponent
             }
 
-            callback { response ->
+            generateFun { response ->
                 applicationManager.invokeAndWait {
                     editorsResultMap = UiBuilder.buildCreateClassesPanel(response, innerPanel)
                     editors.putAll(editorsResultMap)
@@ -99,7 +99,7 @@ object Creators {
     }
 
     private fun retryFun(
-        callback: ((CreateResponse) -> Unit) -> Unit,
+        generateFun: ((CreateResponse) -> Unit) -> Unit,
         editors: MutableMap<String, Editor>,
         innerPanel: JPanel,
         continueButton: JButtonWithListener,
@@ -111,7 +111,7 @@ object Creators {
                 innerPanel.isVisible = false
             }
 
-            callback { response ->
+            generateFun { response ->
                 applicationManager.invokeAndWait {
                     editorsResultMap.keys.forEach { editors.remove(it) }
                     innerPanel.removeAll()
