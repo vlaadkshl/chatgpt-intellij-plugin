@@ -11,8 +11,8 @@ import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
 import com.sytoss.aiHelper.services.CommonFields.applicationManager
 import com.sytoss.aiHelper.services.CommonFields.dumbService
-import com.sytoss.aiHelper.services.codeCreating.Creators
-import com.sytoss.aiHelper.services.codeCreating.Creators.isNeedContinue
+import com.sytoss.aiHelper.services.codeCreating.CodeCreatingService
+import com.sytoss.aiHelper.services.codeCreating.CodeCreatingService.isNeedContinue
 import com.sytoss.aiHelper.ui.components.*
 import java.awt.FlowLayout
 import java.awt.GridBagConstraints
@@ -95,7 +95,7 @@ class CodeCreatingToolWindowContent {
         componentIndex: Int,
         generateFun: ((CreateResponse) -> Unit) -> Unit
     ): MutableMap<String, Editor> =
-        Creators.create(
+        CodeCreatingService.create(
             continuable,
             tabbedPane,
             tabComponent,
@@ -109,7 +109,7 @@ class CodeCreatingToolWindowContent {
         }
 
         pumlContent?.let { puml ->
-            Creators.createBom(puml)?.let {
+            CodeCreatingService.generateBomFromPuml(puml)?.let {
                 showCallback(it)
             } ?: dumbService.smartInvokeLater {
                 Messages.showInfoMessage(
@@ -137,7 +137,7 @@ class CodeCreatingToolWindowContent {
                 return
             }
 
-            Creators.createDto(editorTexts)?.let {
+            CodeCreatingService.generateDtoFromBom(editorTexts)?.let {
                 showCallback(it)
             } ?: dumbService.smartInvokeLater {
                 Messages.showInfoMessage(
@@ -152,7 +152,7 @@ class CodeCreatingToolWindowContent {
             }
 
             pumlContent?.let { puml ->
-                Creators.createDto(puml)?.let {
+                CodeCreatingService.generateDtoFromPuml(puml)?.let {
                     showCallback(it)
                 } ?: dumbService.smartInvokeLater {
                     Messages.showInfoMessage(
@@ -188,7 +188,7 @@ class CodeCreatingToolWindowContent {
             return
         }
 
-        Creators.createConverters(bomTexts, dtoTexts)?.let {
+        CodeCreatingService.generateConverters(bomTexts, dtoTexts)?.let {
             showCallback(it)
         } ?: dumbService.smartInvokeLater {
             Messages.showInfoMessage(

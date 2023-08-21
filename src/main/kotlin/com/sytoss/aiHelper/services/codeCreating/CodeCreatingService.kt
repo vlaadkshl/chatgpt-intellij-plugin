@@ -23,7 +23,7 @@ import javax.swing.JPanel
 import javax.swing.SwingConstants
 import kotlin.concurrent.thread
 
-object Creators {
+object CodeCreatingService {
     var isNeedContinue = false
 
     private fun needsContinue(button: JButton) {
@@ -131,7 +131,7 @@ object Creators {
         }
     }
 
-    fun createBom(pumlContent: String): CreateResponse? {
+    fun generateBomFromPuml(pumlContent: String): CreateResponse? {
         val request = CreateRequest(
             model = ModelType.GPT,
             prompt = """
@@ -146,7 +146,7 @@ object Creators {
         return RequestSender.sendRequest(request)
     }
 
-    fun createDto(pumlContent: String): CreateResponse? {
+    fun generateDtoFromPuml(pumlContent: String): CreateResponse? {
         val request = CreateRequest(
             model = ModelType.GPT,
             prompt = """
@@ -161,7 +161,7 @@ object Creators {
         return RequestSender.sendRequest(request)
     }
 
-    fun createDto(bomElements: List<String>): CreateResponse? {
+    fun generateDtoFromBom(bomElements: List<String>): CreateResponse? {
         val request = CreateRequest(
             model = ModelType.GPT,
             prompt = """
@@ -174,7 +174,7 @@ object Creators {
         return RequestSender.sendRequest(request)
     }
 
-    fun createConverters(boms: List<String>, dtos: List<String>): CreateResponse? {
+    fun generateConverters(boms: List<String>, dtos: List<String>): CreateResponse? {
         val request = CreateRequest(
             model = ModelType.GPT,
             prompt = """
