@@ -1,10 +1,10 @@
 package com.sytoss.aiHelper.ui
 
-import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.ui.Messages
+import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBCheckBox
-import com.intellij.ui.components.JBTabbedPane
+import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
@@ -18,8 +18,8 @@ import java.awt.FlowLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.nio.file.Files
-import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.SwingConstants
 import kotlin.concurrent.thread
 
 class CodeCreatingToolWindowContent {
@@ -27,7 +27,11 @@ class CodeCreatingToolWindowContent {
 
     private val mainPanel = JPanel(GridBagLayout())
 
-    private val tabbedPane = JBTabbedPane()
+    private val codePanel = BorderLayoutPanel()
+
+    private val loadingLabel = JBLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
+
+    private val tree = CreatedClassesTree(codePanel)
 
     private val pumlChooser = FileChooserCreateComponent("Choose PlantUML file", "puml")
 
@@ -84,23 +88,17 @@ class CodeCreatingToolWindowContent {
         return true
     }
 
-    private val generateEditors = mutableMapOf<ElementType, MutableMap<String, Editor>>()
-
-    private fun getTextsFromEditors(elementType: ElementType): List<String> =
-        generateEditors[elementType]?.values?.map { it.document.text } ?: mutableListOf()
-
     private fun createElements(
         continuable: Boolean,
-        tabComponent: BorderLayoutPanel,
-        componentIndex: Int,
+        elementType: ElementType,
         generateFun: ((CreateResponse) -> Unit) -> Unit
-    ): MutableMap<String, Editor> =
-        CodeCreatingService.create(
-            continuable,
-            tabbedPane,
-            tabComponent,
-            componentIndex
-        ) { showCallback -> generateFun(showCallback) }
+    ) {
+        CodeCreatingService.create(continuable, elementType, loadingLabel, tree) { showCallback ->
+            generateFun(
+                showCallback
+            )
+        }
+    }
 
     private fun createBom(showCallback: ((CreateResponse) -> Unit)) {
         var pumlContent: String? = null
@@ -124,8 +122,8 @@ class CodeCreatingToolWindowContent {
     }
 
     private fun createDto(showCallback: ((CreateResponse) -> Unit)) {
-        if (generateEditors.containsKey(ElementType.BOM)) {
-            val editorTexts = getTextsFromEditors(ElementType.BOM)
+        if (tree.hasBom()) {
+            val editorTexts = tree.getTextsFromEditors(ElementType.BOM)
 
             if (editorTexts.isEmpty()) {
                 dumbService.smartInvokeLater {
@@ -165,7 +163,7 @@ class CodeCreatingToolWindowContent {
     }
 
     private fun createConverters(showCallback: ((CreateResponse) -> Unit)) {
-        if (!(generateEditors.contains(ElementType.BOM) || generateEditors.contains(ElementType.DTO))) {
+        if (!(tree.hasBom() || tree.hasDto())) {
             dumbService.smartInvokeLater {
                 Messages.showInfoMessage(
                     "There were no BOMs and DTOs generated.",
@@ -175,8 +173,8 @@ class CodeCreatingToolWindowContent {
             return
         }
 
-        val bomTexts = getTextsFromEditors(ElementType.BOM)
-        val dtoTexts = getTextsFromEditors(ElementType.DTO)
+        val bomTexts = tree.getTextsFromEditors(ElementType.BOM)
+        val dtoTexts = tree.getTextsFromEditors(ElementType.DTO)
 
         if (bomTexts.isEmpty() && dtoTexts.isEmpty()) {
             dumbService.smartInvokeLater {
@@ -198,26 +196,15 @@ class CodeCreatingToolWindowContent {
         }
     }
 
-    private val tabComponents = mutableListOf<Pair<ElementType, BorderLayoutPanel>>()
-
     private fun generate(elemToGenerate: ElementType) {
         val continuable = elemToGenerate != elemsToGenerate.last()
 
-        val component = tabComponents.find { it.first == elemToGenerate } ?: return
-        val componentIndex = tabComponents.indexOf(component)
-
-        createElements(
-            continuable,
-            tabComponent = component.second,
-            componentIndex
-        ) { showCallback ->
+        createElements(continuable, elemToGenerate) { showCallback ->
             when (elemToGenerate) {
                 ElementType.BOM -> createBom(showCallback)
                 ElementType.DTO -> createDto(showCallback)
                 ElementType.CONVERTER -> createConverters(showCallback)
             }
-        }.let {
-            generateEditors[elemToGenerate] = it
         }
 
         while (!isNeedContinue) {
@@ -231,16 +218,7 @@ class CodeCreatingToolWindowContent {
     private val generateBtn = JButtonWithListener("Generate Files") {
         if (!checkBeforeGenerating()) return@JButtonWithListener
 
-        generateEditors.clear()
-        tabbedPane.removeAll()
-
-        var i = 0
-        elemsToGenerate.forEach {
-            tabComponents.add(Pair(it, BorderLayoutPanel()))
-            tabbedPane.addTab(it.value, tabComponents[i].second)
-            tabbedPane.setEnabledAt(i, false)
-            i++
-        }
+        tree.editorsByType.clear()
 
         thread {
             elemsToGenerate.forEach { generate(it) }
@@ -250,9 +228,16 @@ class CodeCreatingToolWindowContent {
     init {
         converterCheckBox.isEnabled = isConverterNeedsEnabling()
 
+        /*
+        * CONTROL PANEL
+        * */
+
         val mainBorderLayout = BorderLayoutPanel()
 
-        addWithConstraints(pumlChooser)
+        //  PUML CHOOSER
+        mainPanel.add(pumlChooser, DefaultConstraints.topLeftColumn)
+
+        //  CHECKBOXES
         val checkboxGroup = JPanel(GridBagLayout())
         checkboxGroup.add(converterCheckBox, DefaultConstraints.checkbox)
         checkboxGroup.add(bomCheckBox, DefaultConstraints.checkboxInsets)
@@ -270,21 +255,40 @@ class CodeCreatingToolWindowContent {
             )
         )
 
+        //  LEFT ALIGNMENT OF CONTROLS
         val mainPanelWrapper = JPanel(FlowLayout(FlowLayout.LEFT))
         mainPanelWrapper.add(mainPanel)
 
+        //  BOTTOM BUTTONS
         val btnPanel = JPanel(FlowLayout(FlowLayout.LEFT))
         btnPanel.add(generateBtn)
 
         mainBorderLayout.addToCenter(mainPanelWrapper)
         mainBorderLayout.addToBottom(btnPanel)
 
+        //  SET CONTROL PANEL
         contentPanel.firstComponent = ScrollWithInsets { mainBorderLayout }
 
-        contentPanel.secondComponent = tabbedPane
-    }
+        /*
+        * CONTENT CREATOR PANEL
+        * */
 
-    private fun addWithConstraints(component: JComponent) {
-        mainPanel.add(component, DefaultConstraints.topLeftColumn)
+        val treeViewer = OnePixelSplitter()
+
+        //  TREE
+        treeViewer.firstComponent = ScrollWithInsets { tree }
+        tree.toggleRootVisibility()
+
+        //  NODE VIEWER
+        val nodeViewerPanel = BorderLayoutPanel()
+        nodeViewerPanel.addToCenter(ScrollWithInsets { codePanel })
+
+        loadingLabel.isVisible = false
+        nodeViewerPanel.addToTop(loadingLabel)
+
+        treeViewer.secondComponent = nodeViewerPanel
+
+        //  SET TREE COMPONENT
+        contentPanel.secondComponent = treeViewer
     }
 }

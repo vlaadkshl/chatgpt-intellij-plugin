@@ -1,6 +1,8 @@
 package com.sytoss.aiHelper.services.codeCreating
 
+import com.intellij.ide.highlighter.JavaClassFileType
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.components.JBLabel
@@ -9,10 +11,13 @@ import com.intellij.ui.components.JBTabbedPane
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.sytoss.aiHelper.bom.codeCreating.CreateRequest
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
+import com.sytoss.aiHelper.bom.codeCreating.ElementType
 import com.sytoss.aiHelper.bom.codeCreating.ModelType
+import com.sytoss.aiHelper.services.CommonFields
 import com.sytoss.aiHelper.services.CommonFields.applicationManager
 import com.sytoss.aiHelper.services.CommonFields.dumbService
 import com.sytoss.aiHelper.services.UiBuilder
+import com.sytoss.aiHelper.ui.components.CreatedClassesTree
 import com.sytoss.aiHelper.ui.components.DefaultConstraints
 import com.sytoss.aiHelper.ui.components.JButtonWithListener
 import java.awt.FlowLayout
@@ -21,6 +26,8 @@ import javax.swing.BorderFactory.createEmptyBorder
 import javax.swing.JButton
 import javax.swing.JPanel
 import javax.swing.SwingConstants
+import javax.swing.tree.DefaultMutableTreeNode
+import javax.swing.tree.DefaultTreeModel
 import kotlin.concurrent.thread
 
 object CodeCreatingService {
@@ -39,25 +46,42 @@ object CodeCreatingService {
 
     fun create(
         continuable: Boolean,
-        tabbedPane: JBTabbedPane,
-        tabComponent: BorderLayoutPanel,
-        componentIndex: Int,
+        type: ElementType,
+        loadingLabel: JBLabel,
+        tree: CreatedClassesTree,
         generateFun: ((CreateResponse) -> Unit) -> Unit
-    ): MutableMap<String, Editor> {
-        val (loadingLabel, innerPanel, continueButton) = fillTabComponent(
-            tabComponent,
-            componentIndex,
-            generateFun,
-            continuable,
-            tabbedPane
-        )
+    ) {
+        dumbService.smartInvokeLater {
+            loadingLabel.isVisible = true
+            tree.toggleRootVisibility()
+        }
 
         try {
             generateFun { response ->
                 applicationManager.invokeAndWait {
-                    editorsResultMap = UiBuilder.buildCreateClassesPanel(response, innerPanel)
-                    editors.putAll(editorsResultMap)
-                    continueButton.isEnabled = true
+                    val model = tree.model as DefaultTreeModel
+                    val root = model.root as DefaultMutableTreeNode
+
+                    val rootChild = DefaultMutableTreeNode(type.value)
+                    model.insertNodeInto(rootChild, root, root.childCount)
+
+                    for (generatedClass in response.result) {
+                        model.insertNodeInto(DefaultMutableTreeNode(generatedClass), rootChild, rootChild.childCount)
+                    }
+
+                    val editors = response.result
+                        .associateBy(
+                            { it.fileName },
+                            {
+                                EditorFactory.getInstance().createEditor(
+                                    EditorFactory.getInstance().createDocument(it.body),
+                                    CommonFields.project,
+                                    JavaClassFileType.INSTANCE,
+                                    false
+                                )
+                            })
+                        .toMutableMap()
+                    tree.editorsByType.putIfAbsent(type, editors)
                 }
             }
         } catch (e: Throwable) {
@@ -65,14 +89,12 @@ object CodeCreatingService {
         } finally {
             dumbService.smartInvokeLater {
                 loadingLabel.isVisible = false
-                retryButton.isEnabled = true
+                tree.toggleRootVisibility()
             }
         }
-
-        return editors
     }
 
-    private fun fillTabComponent(
+    private fun fillTree(
         tabComponent: BorderLayoutPanel,
         componentIndex: Int,
         generateFun: ((CreateResponse) -> Unit) -> Unit,

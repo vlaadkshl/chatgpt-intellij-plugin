@@ -10,5 +10,7 @@ data class CreateResponse(
     data class CreateContent(
         val fileName: String,
         val body: String
-    )
+    ) {
+        override fun toString() = fileName
+    }
 }
