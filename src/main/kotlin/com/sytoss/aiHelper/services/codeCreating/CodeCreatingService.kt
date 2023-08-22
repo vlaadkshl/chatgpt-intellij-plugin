@@ -31,6 +31,7 @@ object CodeCreatingService {
         dumbService.smartInvokeLater {
             loadingLabel.isVisible = true
             tree.toggleRootVisibility()
+            tree.selectTypeRoot(type)
         }
 
         try {

@@ -13,6 +13,7 @@ import com.sytoss.aiHelper.services.CommonFields
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.MutableTreeNode
+import javax.swing.tree.TreePath
 
 class CreatedClassesTree(contentPanel: BorderLayoutPanel) : Tree(DefaultMutableTreeNode("Result")) {
     private val editorsByType = mutableMapOf<ElementType, MutableMap<String, Editor>>()
@@ -75,6 +76,15 @@ class CreatedClassesTree(contentPanel: BorderLayoutPanel) : Tree(DefaultMutableT
 
     fun insertToTypeRoot(type: ElementType, child: DefaultMutableTreeNode) {
         elementNodes[type]?.let { rootNode -> insertToNode(rootNode, child) }
+    }
+
+    fun selectTypeRoot(type: ElementType) {
+        val node = elementNodes[type]
+
+        if (node != null) {
+            val path = TreePath(node.path)
+            selectionModel.selectionPath = path
+        }
     }
 
     fun fillElementNodes(elemsToGenerate: Collection<ElementType>) {
