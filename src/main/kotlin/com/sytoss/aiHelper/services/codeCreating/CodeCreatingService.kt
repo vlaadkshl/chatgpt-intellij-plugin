@@ -1,42 +1,20 @@
 package com.sytoss.aiHelper.services.codeCreating
 
-import com.intellij.ide.highlighter.JavaClassFileType
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.ui.Messages
-import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.components.JBTabbedPane
-import com.intellij.util.ui.components.BorderLayoutPanel
-import com.sytoss.aiHelper.bom.codeCreating.CreateRequest
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
-import com.sytoss.aiHelper.bom.codeCreating.ModelType
-import com.sytoss.aiHelper.services.CommonFields
 import com.sytoss.aiHelper.services.CommonFields.applicationManager
 import com.sytoss.aiHelper.services.CommonFields.dumbService
 import com.sytoss.aiHelper.services.UiBuilder
 import com.sytoss.aiHelper.ui.components.CreatedClassesTree
-import com.sytoss.aiHelper.ui.components.DefaultConstraints
 import com.sytoss.aiHelper.ui.components.JButtonWithListener
-import java.awt.FlowLayout
-import java.awt.GridBagLayout
-import javax.swing.BorderFactory.createEmptyBorder
-import javax.swing.JButton
 import javax.swing.JPanel
-import javax.swing.SwingConstants
 import javax.swing.tree.DefaultMutableTreeNode
-import javax.swing.tree.DefaultTreeModel
-import kotlin.concurrent.thread
 
 object CodeCreatingService {
-    var isNeedContinue = false
 
-    private fun needsContinue(button: JButton) {
-        isNeedContinue = true
-        button.isEnabled = false
-    }
 
     private lateinit var retryButton: JButtonWithListener
 
@@ -45,7 +23,6 @@ object CodeCreatingService {
     private val editors = mutableMapOf<String, Editor>()
 
     fun create(
-        continuable: Boolean,
         type: ElementType,
         loadingLabel: JBLabel,
         tree: CreatedClassesTree,
@@ -59,29 +36,11 @@ object CodeCreatingService {
         try {
             generateFun { response ->
                 applicationManager.invokeAndWait {
-                    val model = tree.model as DefaultTreeModel
-                    val root = model.root as DefaultMutableTreeNode
-
-                    val rootChild = DefaultMutableTreeNode(type.value)
-                    model.insertNodeInto(rootChild, root, root.childCount)
-
                     for (generatedClass in response.result) {
-                        model.insertNodeInto(DefaultMutableTreeNode(generatedClass), rootChild, rootChild.childCount)
+                        tree.insertToTypeRoot(type, DefaultMutableTreeNode(generatedClass))
                     }
 
-                    val editors = response.result
-                        .associateBy(
-                            { it.fileName },
-                            {
-                                EditorFactory.getInstance().createEditor(
-                                    EditorFactory.getInstance().createDocument(it.body),
-                                    CommonFields.project,
-                                    JavaClassFileType.INSTANCE,
-                                    false
-                                )
-                            })
-                        .toMutableMap()
-                    tree.editorsByType.putIfAbsent(type, editors)
+                    tree.fillEditorsByType(type, response)
                 }
             }
         } catch (e: Throwable) {
@@ -94,48 +53,74 @@ object CodeCreatingService {
         }
     }
 
-    private fun fillTree(
-        tabComponent: BorderLayoutPanel,
-        componentIndex: Int,
-        generateFun: ((CreateResponse) -> Unit) -> Unit,
-        continuable: Boolean,
-        tabbedPane: JBTabbedPane
-    ): Triple<JBLabel, JPanel, JButtonWithListener> {
-        val loadingLabel = JBLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
+    fun createBom(pumlContent: String?, showCallback: ((CreateResponse) -> Unit)) {
+        pumlContent?.let { puml ->
+            CodeCreatorWithChatServer.generateBomFromPuml(puml)?.let {
+                showCallback(it)
+            } ?: dumbService.smartInvokeLater {
+                Messages.showInfoMessage(
+                    "There were no DTOs generated.",
+                    "${ElementType.BOM} Generating Error"
+                )
+            }
+        } ?: dumbService.smartInvokeLater {
+            Messages.showInfoMessage("No puml file was selected.", "${ElementType.BOM} Generating Error")
+        }
+    }
 
-        val innerPanel = JPanel(GridBagLayout())
-        innerPanel.add(loadingLabel, DefaultConstraints.topLeftColumn)
+    fun createDtoFromBom(codes: List<String>, showCallback: (CreateResponse) -> Unit) {
+        if (codes.isEmpty()) {
+            dumbService.smartInvokeLater {
+                Messages.showInfoMessage(
+                    "There were no BOMs generated.",
+                    "${ElementType.DTO} Generating Error"
+                )
+            }
+            return
+        }
 
-        val innerPanelWrapper = JPanel(FlowLayout(FlowLayout.LEFT))
-        innerPanelWrapper.add(innerPanel)
+        CodeCreatorWithChatServer.generateDtoFromBom(codes)?.let {
+            showCallback(it)
+        } ?: dumbService.smartInvokeLater {
+            Messages.showInfoMessage(
+                "There were no DTOs generated.",
+                "${ElementType.DTO} Generating Error"
+            )
+        }
+    }
 
-        val innerPanelScrollable = JBScrollPane(innerPanelWrapper)
-        innerPanelScrollable.border = createEmptyBorder()
-
-        val continueButton = JButtonWithListener("Continue") { needsContinue(it.source as JButton) }
-        continueButton.isEnabled = false
-
-        retryButton = JButtonWithListener("Retry") {
-            thread {
-                retryFun(generateFun, innerPanel, continueButton, loadingLabel)
+    fun createDtoFromPuml(pumlContent: String?, showCallback: (CreateResponse) -> Unit) {
+        pumlContent?.let { puml ->
+            CodeCreatorWithChatServer.generateDtoFromPuml(puml)?.let {
+                showCallback(it)
+            } ?: dumbService.smartInvokeLater {
+                Messages.showInfoMessage(
+                    "There were no DTOs generated.",
+                    "${ElementType.DTO} Generating Error"
+                )
             }
         }
-        retryButton.isEnabled = false
+    }
 
-        val buttonsGroup = JPanel(FlowLayout(FlowLayout.LEFT))
-        if (continuable) {
-            buttonsGroup.add(continueButton)
+    fun createConverters(bomTexts: List<String>, dtoTexts: List<String>, showCallback: ((CreateResponse) -> Unit)) {
+        if (bomTexts.isEmpty() && dtoTexts.isEmpty()) {
+            dumbService.smartInvokeLater {
+                Messages.showInfoMessage(
+                    "There were no BOMs generated.",
+                    "${ElementType.CONVERTER} Generating Error"
+                )
+            }
+            return
         }
-        buttonsGroup.add(retryButton)
 
-        tabComponent.addToTop(buttonsGroup)
-        tabComponent.addToCenter(innerPanelScrollable)
-
-        applicationManager.invokeAndWait {
-            tabbedPane.setEnabledAt(componentIndex, true)
-            tabbedPane.selectedComponent = tabComponent
+        CodeCreatorWithChatServer.generateConverters(bomTexts, dtoTexts)?.let {
+            showCallback(it)
+        } ?: dumbService.smartInvokeLater {
+            Messages.showInfoMessage(
+                "There were no DTOs generated.",
+                "${ElementType.CONVERTER} Generating Error"
+            )
         }
-        return Triple(loadingLabel, innerPanel, continueButton)
     }
 
     private fun retryFun(
@@ -169,221 +154,4 @@ object CodeCreatingService {
             }
         }
     }
-
-    fun generateBomFromPuml(pumlContent: String): CreateResponse? {
-        val request = CreateRequest(
-            model = ModelType.GPT,
-            prompt = """
-                    Write java classes for BOM according to the PUML diagram below. If there is some connections, that are displayed in PUML file, you need to put them in code.
-                    
-                    PUML diagram:
-                    $pumlContent
-                """.trimIndent(),
-            example = bomExample
-        )
-
-        return RequestSender.sendRequest(request)
-    }
-
-    fun generateDtoFromPuml(pumlContent: String): CreateResponse? {
-        val request = CreateRequest(
-            model = ModelType.GPT,
-            prompt = """
-                    Write java classes for DTO according to the PUML diagram below. If there is some connections, that are displayed in PUML file, you need to put them in code.
-                    
-                    PUML diagram:
-                    $pumlContent
-                """.trimIndent(),
-            example = dtoExample
-        )
-
-        return RequestSender.sendRequest(request)
-    }
-
-    fun generateDtoFromBom(bomElements: List<String>): CreateResponse? {
-        val request = CreateRequest(
-            model = ModelType.GPT,
-            prompt = """
-                    Create DTO classes according to the BOM classes below:
-                    ${bomElements.joinToString(separator = "\n")}
-                """.trimIndent(),
-            example = dtoExample
-        )
-
-        return RequestSender.sendRequest(request)
-    }
-
-    fun generateConverters(boms: List<String>, dtos: List<String>): CreateResponse? {
-        val request = CreateRequest(
-            model = ModelType.GPT,
-            prompt = """
-                    Create Converter classes from BOM to DTO and vice versa according to the classes below:
-                    
-                    BOMs:
-                    ${boms.joinToString(separator = "\n\n")}
-                    
-                    DTOs:
-                    ${dtos.joinToString(separator = "\n\n")}
-                """.trimIndent(),
-            example = converterExample
-        )
-
-        return RequestSender.sendRequest(request)
-    }
-
-    private val bomExample = """
-        Hotel.java:
-        ```java
-        import lombok.AllArgsConstructor;
-        import lombok.Builder;
-        import lombok.Data;
-        import lombok.NoArgsConstructor;
-        
-        import java.util.List;
-        
-        @Data
-        @Builder
-        @NoArgsConstructor
-        @AllArgsConstructor
-        public class Hotel {
-            private long id;
-        
-            private String address;
-        
-            private String type;
-        
-            private List<Room> rooms;
-        }
-        ```
-        
-        Room.java:
-        ```java
-        import lombok.AllArgsConstructor;
-        import lombok.Builder;
-        import lombok.Data;
-        import lombok.NoArgsConstructor;
-        
-        @Data
-        @Builder
-        @NoArgsConstructor
-        @AllArgsConstructor
-        public class Room {
-            private long id;
-        
-            private String number;
-        
-            private String level;
-        
-            private int capacity;
-        }
-        ```
-    """.trimIndent()
-
-    private val dtoExample = """
-        CourseDto.java:
-        ```java
-        import jakarta.persistence.*;
-        import lombok.AllArgsConstructor;
-        import lombok.Builder;
-        import lombok.Data;
-        import lombok.NoArgsConstructor;
-        
-        import java.util.List;
-        
-        @Entity
-        @Data
-        @Builder
-        @Table(name = "COURSE")
-        @NoArgsConstructor
-        @AllArgsConstructor
-        public class CourseDto {
-            @Id
-            @GeneratedValue(strategy = GenerationType.IDENTITY)
-            private long id;
-        
-            @Column(name = "name")
-            private String name;
-        }
-        ```
-        
-        StudentDto.java:
-        ```java
-        import jakarta.persistence.*;
-        import lombok.AllArgsConstructor;
-        import lombok.Builder;
-        import lombok.Data;
-        import lombok.NoArgsConstructor;
-        
-        @Entity
-        @Data
-        @Builder
-        @Table(name = "STUDENT")
-        @NoArgsConstructor
-        @AllArgsConstructor
-        public class StudentDto {
-            @Id
-            @GeneratedValue(strategy = GenerationType.IDENTITY)
-            private long id;
-        
-            @Column(name = "name")
-            private String name;
-        
-            @ManyToOne
-            @JoinColumn(name = "course_id")
-            private CourseDto course;
-        }
-        ```
-    """.trimIndent()
-
-    private val converterExample = """
-        BookConverter:
-        ```java
-        import com.sytoss.edu.library.bom.Author;
-        import com.sytoss.edu.library.bom.Book;
-        import com.sytoss.edu.library.dto.AuthorDTO;
-        import com.sytoss.edu.library.dto.BookDTO;
-        import com.sytoss.edu.library.dto.GenreDTO;
-        import lombok.RequiredArgsConstructor;
-        import org.springframework.stereotype.Component;
-
-        import java.util.HashSet;
-        import java.util.Set;
-        import java.util.stream.Collectors;
-
-        @Component
-        @RequiredArgsConstructor
-        public class BookConverter {
-
-            private final AuthorConverter authorConverter;
-
-            private final GenreConverter genreConverter;
-
-            public void toDto(Book source, BookDTO destination) {
-                destination.setName(source.getName());
-                destination.setLanguage(source.getLanguage());
-                destination.setYearOfPublishing(source.getYearOfPublishing());
-                AuthorDTO authorDTO = new AuthorDTO();
-                authorConverter.toDto(source.getAuthor(), authorDTO);
-                destination.setAuthor(authorDTO);
-                Set<GenreDTO> genres = new HashSet<>();
-                genreConverter.toDto(source.getGenres(), genres);
-                destination.setGenres(genres);
-            }
-
-            public void fromDTO(BookDTO source, Book book) {
-                book.setId(source.getId());
-                book.setName(source.getName());
-                book.setLanguage(source.getLanguage());
-                book.setYearOfPublishing(source.getYearOfPublishing());
-                book.setGenres(source.getGenres()
-                        .stream()
-                        .map(genreConverter::fromDTO)
-                        .collect(Collectors.toList()));
-                Author author = new Author();
-                authorConverter.fromDTO(source.getAuthor(), author);
-                book.setAuthor(author);
-            }
-        }
-        ```
-    """.trimIndent()
 }

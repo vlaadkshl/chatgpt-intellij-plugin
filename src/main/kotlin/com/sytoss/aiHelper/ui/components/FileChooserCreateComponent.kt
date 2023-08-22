@@ -73,6 +73,8 @@ class FileChooserCreateComponent(text: String) : JPanel(FlowLayout(FlowLayout.LE
         }
     }
 
+    fun getFirstFileContent(): String = Files.readString(selectedFiles[0].toNioPath())
+
     private fun changeButtonsStateToAppropriate() {
         showButton.isEnabled = selectedFiles.isNotEmpty()
         removeButton.isEnabled = selectedFiles.isNotEmpty()
