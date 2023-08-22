@@ -34,12 +34,13 @@ object RequestSender {
             return json.decodeFromString<CreateResponse>(httpResponse.body())
         } catch (e: Exception) {
             applicationManager.invokeLater {
-                when {
-                    e is SocketTimeoutException -> Messages.showErrorDialog(
+                when (e) {
+                    is SocketTimeoutException -> Messages.showErrorDialog(
                         "Timeout. Try again.",
                         "Request Sending Error"
                     )
 
+                    is InterruptedException -> {}
                     else -> Messages.showErrorDialog(e.message, "Request Sending Error")
                 }
             }

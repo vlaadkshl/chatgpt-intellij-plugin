@@ -154,21 +154,25 @@ class CodeCreatingToolWindowContent {
         isNeedContinue = false
     }
 
-    private val generateBtn = JButtonWithListener("Generate Files") { event ->
+    private val generateThread = thread(start = false) {
+        elemsToGenerate.forEach {
+            try {
+                generate(it)
+            } catch (_: InterruptedException) {
+                isDone = true
+            }
+        }
+    }
+
+    private val generateBtn = JButtonWithListener("Generate Files") {
         if (!checkBeforeGenerating()) return@JButtonWithListener
 
         tree.removeEditors()
 
         tree.clearRoot()
         tree.fillElementNodes(elemsToGenerate)
-        (event.source as JButtonWithListener).isEnabled = false
 
-        thread {
-            elemsToGenerate.forEach { generate(it) }
-
-            //  Enabling button
-            dumbService.smartInvokeLater { (event.source as JButtonWithListener).isEnabled = true }
-        }
+        generateThread.start()
     }
 
     init {
@@ -224,24 +228,44 @@ class CodeCreatingToolWindowContent {
         //  ACTION TOOLBAR
 
         class ContinueAction : AnAction("Co&ntinue Generating", null, AllIcons.Actions.Resume) {
-            override fun actionPerformed(e: AnActionEvent) = needsContinue()
+            override fun actionPerformed(e: AnActionEvent) {
+                needsContinue()
+            }
 
             override fun update(e: AnActionEvent) {
                 e.presentation.isEnabled = !(isLoading || isDone)
             }
 
-            override fun getActionUpdateThread() = ActionUpdateThread.BGT
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        }
+
+        class CancelAction : AnAction("Cance&l Generating", null, AllIcons.Actions.Cancel) {
+            override fun actionPerformed(e: AnActionEvent) {
+                generateThread.interrupt()
+
+                tree.removeEditors()
+                tree.clearRoot()
+                loadingLabel.isVisible = false
+            }
+
+            override fun update(e: AnActionEvent) {
+                e.presentation.isEnabled = isLoading
+            }
+
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
         }
 
         val continueAction = ContinueAction()
+        val cancelAction = CancelAction()
 
         val actionToolbar = ActionManager.getInstance().createActionToolbar(
             ActionPlaces.TOOLBAR,
-            DefaultActionGroup(continueAction),
+            DefaultActionGroup(continueAction, cancelAction),
             false
         ) as ActionToolbarImpl
 
         actionToolbar.setForceMinimumSize(true)
+        actionToolbar.targetComponent = treeViewerWithActions
         actionToolbar.layoutPolicy = ActionToolbar.NOWRAP_LAYOUT_POLICY
 
         treeViewerWithActions.addToLeft(actionToolbar)
