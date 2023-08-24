@@ -111,6 +111,7 @@ class CodeCreatingToolWindowContent {
 
         create(elemToGenerate, loadingLabel, tree) { showCallback ->
             dumbService.smartInvokeLater { isLoading = true }
+            tree.setElementLoadingState(elemToGenerate, CreatedClassesTree.LoadingState.LOADING)
 
             when (elemToGenerate) {
                 ElementType.BOM -> {
@@ -136,7 +137,6 @@ class CodeCreatingToolWindowContent {
                         }
                         return@create
                     }
-
                     val bomTexts = tree.getTextsFromEditors(ElementType.BOM)
                     val dtoTexts = tree.getTextsFromEditors(ElementType.DTO)
 
@@ -144,6 +144,7 @@ class CodeCreatingToolWindowContent {
                 }
             }
 
+            tree.setElementLoadingState(elemToGenerate, CreatedClassesTree.LoadingState.READY)
             dumbService.smartInvokeLater { isLoading = false }
         }
 
@@ -159,6 +160,7 @@ class CodeCreatingToolWindowContent {
             try {
                 generate(it)
             } catch (_: InterruptedException) {
+                tree.setElementLoadingState(it, CreatedClassesTree.LoadingState.READY)
                 isDone = true
             }
         }
@@ -171,6 +173,7 @@ class CodeCreatingToolWindowContent {
 
         tree.clearRoot()
         tree.fillElementNodes(elemsToGenerate)
+        tree.fillElementLoadingState(elemsToGenerate)
 
         generateThread.start()
     }
@@ -265,7 +268,6 @@ class CodeCreatingToolWindowContent {
         ) as ActionToolbarImpl
 
         actionToolbar.setForceMinimumSize(true)
-        actionToolbar.targetComponent = treeViewerWithActions
         actionToolbar.layoutPolicy = ActionToolbar.NOWRAP_LAYOUT_POLICY
 
         treeViewerWithActions.addToLeft(actionToolbar)
@@ -287,6 +289,7 @@ class CodeCreatingToolWindowContent {
         nodeViewerPanel.addToTop(loadingLabel)
 
         treeViewer.secondComponent = nodeViewerPanel
+        actionToolbar.targetComponent = nodeViewerPanel
 
         //  SET TREE COMPONENT
         contentPanel.secondComponent = treeViewerWithActions

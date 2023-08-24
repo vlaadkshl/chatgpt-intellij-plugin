@@ -1,8 +1,11 @@
 package com.sytoss.aiHelper.ui.components
 
+import com.intellij.icons.AllIcons
 import com.intellij.ide.highlighter.JavaClassFileType
+import com.intellij.ide.util.treeView.NodeRenderer
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ui.StatusText
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -10,6 +13,7 @@ import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse.CreateContent
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
 import com.sytoss.aiHelper.services.CommonFields
+import javax.swing.JTree
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.MutableTreeNode
@@ -19,6 +23,12 @@ class CreatedClassesTree(contentPanel: BorderLayoutPanel) : Tree(DefaultMutableT
     private val editorsByType = mutableMapOf<ElementType, MutableMap<String, Editor>>()
 
     private val elementNodes = mutableMapOf<ElementType, DefaultMutableTreeNode>()
+
+    enum class LoadingState {
+        LOADING, WAITING, READY
+    }
+
+    private val elementLoading = mutableMapOf<ElementType, LoadingState>()
 
     init {
         addTreeSelectionListener {
@@ -41,6 +51,35 @@ class CreatedClassesTree(contentPanel: BorderLayoutPanel) : Tree(DefaultMutableT
                 }
             }
         }
+
+        setCellRenderer(object : NodeRenderer() {
+            override fun customizeCellRenderer(
+                tree: JTree,
+                value: Any?,
+                selected: Boolean,
+                expanded: Boolean,
+                leaf: Boolean,
+                row: Int,
+                hasFocus: Boolean
+            ) {
+                super.customizeCellRenderer(tree, value, selected, expanded, leaf, row, hasFocus)
+
+                val stringValue = value.toString()
+                val elementType = ElementType.values().find { it.text == stringValue }
+
+                when (elementLoading[elementType]) {
+                    LoadingState.LOADING -> icon = fixIconIfNeeded(AnimatedIcon.Default(), selected, hasFocus)
+                    LoadingState.WAITING -> icon = fixIconIfNeeded(AllIcons.Actions.Pause, selected, hasFocus)
+                    LoadingState.READY -> icon = fixIconIfNeeded(AllIcons.Actions.Execute, selected, hasFocus)
+                    null -> {}
+                }
+            }
+        })
+    }
+
+    fun setElementLoadingState(element: ElementType, state: LoadingState) {
+        elementLoading[element] = state
+        (model as DefaultTreeModel).nodeChanged(elementNodes[element])
     }
 
     fun removeEditors() = editorsByType.clear()
@@ -94,6 +133,10 @@ class CreatedClassesTree(contentPanel: BorderLayoutPanel) : Tree(DefaultMutableT
             insertToRoot(child)
             elementNodes[elementType] = child
         }
+    }
+
+    fun fillElementLoadingState(elemsToGenerate: Collection<ElementType>) {
+        elemsToGenerate.forEach { elementLoading[it] = LoadingState.WAITING }
     }
 
     fun clearRoot() = getRoot().removeAllChildren()
