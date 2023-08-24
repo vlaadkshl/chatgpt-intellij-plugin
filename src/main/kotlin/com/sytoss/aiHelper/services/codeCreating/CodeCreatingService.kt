@@ -1,27 +1,14 @@
 package com.sytoss.aiHelper.services.codeCreating
 
-import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.ui.Messages
-import com.intellij.ui.components.JBLabel
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
 import com.sytoss.aiHelper.services.CommonFields.applicationManager
 import com.sytoss.aiHelper.services.CommonFields.dumbService
-import com.sytoss.aiHelper.services.UiBuilder
 import com.sytoss.aiHelper.ui.components.CreatedClassesTree
-import com.sytoss.aiHelper.ui.components.JButtonWithListener
-import javax.swing.JPanel
 import javax.swing.tree.DefaultMutableTreeNode
 
 object CodeCreatingService {
-
-
-    private lateinit var retryButton: JButtonWithListener
-
-    private lateinit var editorsResultMap: MutableMap<String, Editor>
-
-    private val editors = mutableMapOf<String, Editor>()
-
     fun create(
         type: ElementType,
         tree: CreatedClassesTree,
@@ -120,38 +107,6 @@ object CodeCreatingService {
                 "There were no DTOs generated.",
                 "${ElementType.CONVERTER} Generating Error"
             )
-        }
-    }
-
-    private fun retryFun(
-        generateFun: ((CreateResponse) -> Unit) -> Unit,
-        innerPanel: JPanel,
-        continueButton: JButtonWithListener,
-        loadingLabel: JBLabel
-    ) {
-        try {
-            dumbService.smartInvokeLater {
-                loadingLabel.isVisible = true
-                innerPanel.isVisible = false
-            }
-
-            generateFun { response ->
-                applicationManager.invokeAndWait {
-                    editorsResultMap.keys.forEach { editors.remove(it) }
-                    innerPanel.removeAll()
-                    innerPanel.isVisible = true
-
-                    editors.putAll(UiBuilder.buildCreateClassesPanel(response, innerPanel))
-                    continueButton.isEnabled = true
-                }
-            }
-        } catch (e: Throwable) {
-            dumbService.smartInvokeLater { Messages.showErrorDialog(e.message, "Error") }
-        } finally {
-            dumbService.smartInvokeLater {
-                loadingLabel.isVisible = false
-                retryButton.isEnabled = true
-            }
         }
     }
 }
