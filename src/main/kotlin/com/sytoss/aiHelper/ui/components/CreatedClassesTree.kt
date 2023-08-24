@@ -65,7 +65,7 @@ class CreatedClassesTree(contentPanel: BorderLayoutPanel) : Tree(DefaultMutableT
                 super.customizeCellRenderer(tree, value, selected, expanded, leaf, row, hasFocus)
 
                 val stringValue = value.toString()
-                val elementType = ElementType.values().find { it.text == stringValue }
+                val elementType = ElementType.values().find { it.toString() == stringValue }
 
                 when (elementLoading[elementType]) {
                     LoadingState.LOADING -> icon = fixIconIfNeeded(AnimatedIcon.Default(), selected, hasFocus)

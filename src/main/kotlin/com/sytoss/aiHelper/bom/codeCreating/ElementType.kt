@@ -1,6 +1,6 @@
 package com.sytoss.aiHelper.bom.codeCreating
 
-enum class ElementType(val text: String) {
+enum class ElementType(private val text: String) {
     BOM("BOM"),
     DTO("DTO"),
     CONVERTER("Converter");
