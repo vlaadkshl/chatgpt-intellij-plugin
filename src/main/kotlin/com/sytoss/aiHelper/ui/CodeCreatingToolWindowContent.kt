@@ -258,7 +258,10 @@ class CodeCreatingToolWindowContent {
 
         val actionToolbar = ActionManager.getInstance().createActionToolbar(
             ActionPlaces.TOOLBAR,
-            DefaultActionGroup(continueAction, cancelAction),
+            DefaultActionGroup(
+                continueAction,
+//                cancelAction
+            ),
             false
         ) as ActionToolbarImpl
 
