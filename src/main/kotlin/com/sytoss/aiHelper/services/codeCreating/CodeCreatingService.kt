@@ -40,6 +40,8 @@ object CodeCreatingService {
                     }
 
                     tree.fillEditorsByType(type, response)
+
+                    tree.expandTypeRoot(type)
                 }
             }
         } catch (e: Throwable) {

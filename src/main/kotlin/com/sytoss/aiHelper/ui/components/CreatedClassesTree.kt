@@ -117,6 +117,10 @@ class CreatedClassesTree(contentPanel: BorderLayoutPanel) : Tree(DefaultMutableT
         elementNodes[type]?.let { rootNode -> insertToNode(rootNode, child) }
     }
 
+    fun expandTypeRoot(type: ElementType) {
+        elementNodes[type]?.let { rootNode -> expandPath(TreePath(rootNode.path)) }
+    }
+
     fun selectTypeRoot(type: ElementType) {
         val node = elementNodes[type]
 
