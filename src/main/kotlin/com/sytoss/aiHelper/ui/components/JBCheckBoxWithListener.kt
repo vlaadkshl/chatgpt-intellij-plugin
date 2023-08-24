@@ -7,4 +7,6 @@ class JBCheckBoxWithListener(title: String, listener: (e: ActionEvent) -> Unit) 
     init {
         addActionListener(listener)
     }
+
+    constructor(objectTitle: Any, listener: (e: ActionEvent) -> Unit) : this(objectTitle.toString(), listener)
 }

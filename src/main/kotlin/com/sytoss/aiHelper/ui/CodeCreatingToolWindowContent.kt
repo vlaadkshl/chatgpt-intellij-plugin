@@ -1,24 +1,24 @@
 package com.sytoss.aiHelper.ui
 
-import com.intellij.openapi.editor.Editor
+import com.intellij.icons.AllIcons
+import com.intellij.openapi.actionSystem.*
+import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBCheckBox
-import com.intellij.ui.components.JBTabbedPane
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.components.BorderLayoutPanel
-import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
 import com.sytoss.aiHelper.services.CommonFields.applicationManager
 import com.sytoss.aiHelper.services.CommonFields.dumbService
 import com.sytoss.aiHelper.services.codeCreating.CodeCreatingService
-import com.sytoss.aiHelper.services.codeCreating.CodeCreatingService.isNeedContinue
+import com.sytoss.aiHelper.services.codeCreating.CodeCreatingService.create
+import com.sytoss.aiHelper.services.codeCreating.CodeCreatingService.createConverters
 import com.sytoss.aiHelper.ui.components.*
 import java.awt.FlowLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
-import java.nio.file.Files
-import javax.swing.JComponent
 import javax.swing.JPanel
 import kotlin.concurrent.thread
 
@@ -27,7 +27,13 @@ class CodeCreatingToolWindowContent {
 
     private val mainPanel = JPanel(GridBagLayout())
 
-    private val tabbedPane = JBTabbedPane()
+    private val codePanel = BorderLayoutPanel()
+
+    private var isLoading = false
+
+    private var isDone = true
+
+    private val tree = CreatedClassesTree(codePanel)
 
     private val pumlChooser = FileChooserCreateComponent("Choose PlantUML file", "puml")
 
@@ -39,7 +45,7 @@ class CodeCreatingToolWindowContent {
 
     private fun isConverterNeedsEnabling() = isBomCheckboxSelected && isDtoCheckboxSelected
 
-    private val converterCheckBox = JBCheckBoxWithListener(ElementType.CONVERTER.value) {
+    private val converterCheckBox = JBCheckBoxWithListener(ElementType.CONVERTER) {
         val source = it.source as JBCheckBox
         if (source.isSelected && source.isEnabled) {
             elemsToGenerate.add(ElementType.CONVERTER)
@@ -48,7 +54,7 @@ class CodeCreatingToolWindowContent {
         }
     }
 
-    private val bomCheckBox = JBCheckBoxWithListener(ElementType.BOM.value) {
+    private val bomCheckBox = JBCheckBoxWithListener(ElementType.BOM) {
         isBomCheckboxSelected = (it.source as JBCheckBox).isSelected
 
         converterCheckBox.isEnabled = isConverterNeedsEnabling()
@@ -60,7 +66,7 @@ class CodeCreatingToolWindowContent {
         }
     }
 
-    private val dtoCheckBox = JBCheckBoxWithListener(ElementType.DTO.value) {
+    private val dtoCheckBox = JBCheckBoxWithListener(ElementType.DTO) {
         isDtoCheckboxSelected = (it.source as JBCheckBox).isSelected
 
         converterCheckBox.isEnabled = isConverterNeedsEnabling()
@@ -84,140 +90,58 @@ class CodeCreatingToolWindowContent {
         return true
     }
 
-    private val generateEditors = mutableMapOf<ElementType, MutableMap<String, Editor>>()
-
-    private fun getTextsFromEditors(elementType: ElementType): List<String> =
-        generateEditors[elementType]?.values?.map { it.document.text } ?: mutableListOf()
-
-    private fun createElements(
-        continuable: Boolean,
-        tabComponent: BorderLayoutPanel,
-        componentIndex: Int,
-        generateFun: ((CreateResponse) -> Unit) -> Unit
-    ): MutableMap<String, Editor> =
-        CodeCreatingService.create(
-            continuable,
-            tabbedPane,
-            tabComponent,
-            componentIndex
-        ) { showCallback -> generateFun(showCallback) }
-
-    private fun createBom(showCallback: ((CreateResponse) -> Unit)) {
+    private fun getPumlContentInEDT(): String? {
         var pumlContent: String? = null
-        applicationManager.invokeAndWait {
-            pumlContent = Files.readString(pumlChooser.selectedFiles[0].toNioPath())
-        }
-
-        pumlContent?.let { puml ->
-            CodeCreatingService.generateBomFromPuml(puml)?.let {
-                showCallback(it)
-            } ?: dumbService.smartInvokeLater {
-                Messages.showInfoMessage(
-                    "There were no DTOs generated.",
-                    "${ElementType.BOM.value} Generating Error"
-                )
-            }
-        } ?: dumbService.smartInvokeLater {
-            Messages.showInfoMessage("No puml file was selected.", "${ElementType.BOM.value} Generating Error")
-        }
-
+        applicationManager.invokeAndWait { pumlContent = pumlChooser.getFirstFileContent() }
+        return pumlContent
     }
 
-    private fun createDto(showCallback: ((CreateResponse) -> Unit)) {
-        if (generateEditors.containsKey(ElementType.BOM)) {
-            val editorTexts = getTextsFromEditors(ElementType.BOM)
+    private var isNeedContinue = false
 
-            if (editorTexts.isEmpty()) {
-                dumbService.smartInvokeLater {
-                    Messages.showInfoMessage(
-                        "There were no BOMs generated.",
-                        "${ElementType.DTO.value} Generating Error"
-                    )
-                }
-                return
-            }
-
-            CodeCreatingService.generateDtoFromBom(editorTexts)?.let {
-                showCallback(it)
-            } ?: dumbService.smartInvokeLater {
-                Messages.showInfoMessage(
-                    "There were no DTOs generated.",
-                    "${ElementType.DTO.value} Generating Error"
-                )
-            }
-        } else {
-            var pumlContent: String? = null
-            applicationManager.invokeAndWait {
-                pumlContent = Files.readString(pumlChooser.selectedFiles[0].toNioPath())
-            }
-
-            pumlContent?.let { puml ->
-                CodeCreatingService.generateDtoFromPuml(puml)?.let {
-                    showCallback(it)
-                } ?: dumbService.smartInvokeLater {
-                    Messages.showInfoMessage(
-                        "There were no DTOs generated.",
-                        "${ElementType.DTO.value} Generating Error"
-                    )
-                }
-            }
-        }
+    private fun needsContinue() {
+        isNeedContinue = true
     }
-
-    private fun createConverters(showCallback: ((CreateResponse) -> Unit)) {
-        if (!(generateEditors.contains(ElementType.BOM) || generateEditors.contains(ElementType.DTO))) {
-            dumbService.smartInvokeLater {
-                Messages.showInfoMessage(
-                    "There were no BOMs and DTOs generated.",
-                    "${ElementType.CONVERTER.value} Generating Error"
-                )
-            }
-            return
-        }
-
-        val bomTexts = getTextsFromEditors(ElementType.BOM)
-        val dtoTexts = getTextsFromEditors(ElementType.DTO)
-
-        if (bomTexts.isEmpty() && dtoTexts.isEmpty()) {
-            dumbService.smartInvokeLater {
-                Messages.showInfoMessage(
-                    "There were no BOMs generated.",
-                    "${ElementType.CONVERTER.value} Generating Error"
-                )
-            }
-            return
-        }
-
-        CodeCreatingService.generateConverters(bomTexts, dtoTexts)?.let {
-            showCallback(it)
-        } ?: dumbService.smartInvokeLater {
-            Messages.showInfoMessage(
-                "There were no DTOs generated.",
-                "${ElementType.CONVERTER.value} Generating Error"
-            )
-        }
-    }
-
-    private val tabComponents = mutableListOf<Pair<ElementType, BorderLayoutPanel>>()
 
     private fun generate(elemToGenerate: ElementType) {
-        val continuable = elemToGenerate != elemsToGenerate.last()
+        isDone = elemToGenerate == elemsToGenerate.last()
 
-        val component = tabComponents.find { it.first == elemToGenerate } ?: return
-        val componentIndex = tabComponents.indexOf(component)
+        create(elemToGenerate, tree) { showCallback ->
+            dumbService.smartInvokeLater { isLoading = true }
+            tree.setElementLoadingState(elemToGenerate, CreatedClassesTree.LoadingState.LOADING)
 
-        createElements(
-            continuable,
-            tabComponent = component.second,
-            componentIndex
-        ) { showCallback ->
             when (elemToGenerate) {
-                ElementType.BOM -> createBom(showCallback)
-                ElementType.DTO -> createDto(showCallback)
-                ElementType.CONVERTER -> createConverters(showCallback)
+                ElementType.BOM -> {
+                    CodeCreatingService.createBom(getPumlContentInEDT(), showCallback)
+                }
+
+                ElementType.DTO -> {
+                    if (tree.hasBom()) {
+                        val editorTexts = tree.getTextsFromEditors(ElementType.BOM)
+                        CodeCreatingService.createDtoFromBom(editorTexts, showCallback)
+                    } else {
+                        CodeCreatingService.createDtoFromPuml(getPumlContentInEDT(), showCallback)
+                    }
+                }
+
+                ElementType.CONVERTER -> {
+                    if (!(tree.hasBom() || tree.hasDto())) {
+                        dumbService.smartInvokeLater {
+                            Messages.showInfoMessage(
+                                "There were no BOMs and DTOs generated.",
+                                "${ElementType.CONVERTER} Generating Error"
+                            )
+                        }
+                        return@create
+                    }
+                    val bomTexts = tree.getTextsFromEditors(ElementType.BOM)
+                    val dtoTexts = tree.getTextsFromEditors(ElementType.DTO)
+
+                    createConverters(bomTexts, dtoTexts, showCallback)
+                }
             }
-        }.let {
-            generateEditors[elemToGenerate] = it
+
+            tree.setElementLoadingState(elemToGenerate, CreatedClassesTree.LoadingState.READY)
+            dumbService.smartInvokeLater { isLoading = false }
         }
 
         while (!isNeedContinue) {
@@ -227,32 +151,42 @@ class CodeCreatingToolWindowContent {
         isNeedContinue = false
     }
 
+    private val generateThread = thread(start = false) {
+        elemsToGenerate.forEach {
+            try {
+                generate(it)
+            } catch (_: InterruptedException) {
+                tree.setElementLoadingState(it, CreatedClassesTree.LoadingState.READY)
+                isDone = true
+            }
+        }
+    }
 
     private val generateBtn = JButtonWithListener("Generate Files") {
         if (!checkBeforeGenerating()) return@JButtonWithListener
 
-        generateEditors.clear()
-        tabbedPane.removeAll()
+        tree.removeEditors()
 
-        var i = 0
-        elemsToGenerate.forEach {
-            tabComponents.add(Pair(it, BorderLayoutPanel()))
-            tabbedPane.addTab(it.value, tabComponents[i].second)
-            tabbedPane.setEnabledAt(i, false)
-            i++
-        }
+        tree.clearRoot()
+        tree.fillElementNodes(elemsToGenerate)
+        tree.fillElementLoadingState(elemsToGenerate)
 
-        thread {
-            elemsToGenerate.forEach { generate(it) }
-        }
+        generateThread.start()
     }
 
     init {
         converterCheckBox.isEnabled = isConverterNeedsEnabling()
 
+        /*
+        * CONTROL PANEL
+        * */
+
         val mainBorderLayout = BorderLayoutPanel()
 
-        addWithConstraints(pumlChooser)
+        //  PUML CHOOSER
+        mainPanel.add(pumlChooser, DefaultConstraints.topLeftColumn)
+
+        //  CHECKBOXES
         val checkboxGroup = JPanel(GridBagLayout())
         checkboxGroup.add(converterCheckBox, DefaultConstraints.checkbox)
         checkboxGroup.add(bomCheckBox, DefaultConstraints.checkboxInsets)
@@ -270,21 +204,94 @@ class CodeCreatingToolWindowContent {
             )
         )
 
+        //  LEFT ALIGNMENT OF CONTROLS
         val mainPanelWrapper = JPanel(FlowLayout(FlowLayout.LEFT))
         mainPanelWrapper.add(mainPanel)
 
+        //  BOTTOM BUTTONS
         val btnPanel = JPanel(FlowLayout(FlowLayout.LEFT))
         btnPanel.add(generateBtn)
 
         mainBorderLayout.addToCenter(mainPanelWrapper)
         mainBorderLayout.addToBottom(btnPanel)
 
+        //  SET CONTROL PANEL
         contentPanel.firstComponent = ScrollWithInsets { mainBorderLayout }
 
-        contentPanel.secondComponent = tabbedPane
-    }
+        /*
+        * CONTENT CREATOR PANEL
+        * */
 
-    private fun addWithConstraints(component: JComponent) {
-        mainPanel.add(component, DefaultConstraints.topLeftColumn)
+        val treeViewerWithActions = BorderLayoutPanel()
+
+        //  ACTION TOOLBAR
+
+        class ContinueAction : AnAction("Co&ntinue Generating", null, AllIcons.Actions.Resume) {
+            override fun actionPerformed(e: AnActionEvent) {
+                needsContinue()
+            }
+
+            override fun update(e: AnActionEvent) {
+                e.presentation.isEnabled = !(isLoading || isDone)
+            }
+
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        }
+
+        class CancelAction : AnAction("Cance&l Generating", null, AllIcons.Actions.Cancel) {
+            override fun actionPerformed(e: AnActionEvent) {
+                generateThread.interrupt()
+
+                tree.removeEditors()
+                tree.clearRoot()
+            }
+
+            override fun update(e: AnActionEvent) {
+                e.presentation.isEnabled = isLoading
+            }
+
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        }
+
+        val continueAction = ContinueAction()
+        val cancelAction = CancelAction()
+
+        val actionToolbar = ActionManager.getInstance().createActionToolbar(
+            ActionPlaces.TOOLBAR,
+            DefaultActionGroup(
+                continueAction,
+//                cancelAction
+            ),
+            false
+        ) as ActionToolbarImpl
+
+        actionToolbar.setForceMinimumSize(true)
+        actionToolbar.layoutPolicy = ActionToolbar.NOWRAP_LAYOUT_POLICY
+
+        treeViewerWithActions.addToLeft(actionToolbar)
+
+        //  TREE VIEWER
+
+        val treeViewer = OnePixelSplitter()
+        treeViewerWithActions.addToCenter(treeViewer)
+
+        //  TREE
+        treeViewer.firstComponent = ScrollWithInsets { tree }
+        tree.toggleRootVisibility()
+
+        //  NODE VIEWER
+        val nodeViewerPane = JBScrollPane(
+            object : BorderLayoutPanel() {
+                init {
+                    addToCenter(codePanel)
+                    border = null
+                }
+            }
+        )
+        treeViewer.secondComponent = nodeViewerPane
+        actionToolbar.targetComponent = codePanel
+
+        //  SET TREE COMPONENT
+        contentPanel.secondComponent = treeViewerWithActions
     }
 }
