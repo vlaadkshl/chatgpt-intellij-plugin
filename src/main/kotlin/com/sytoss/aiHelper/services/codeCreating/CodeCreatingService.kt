@@ -24,12 +24,10 @@ object CodeCreatingService {
 
     fun create(
         type: ElementType,
-        loadingLabel: JBLabel,
         tree: CreatedClassesTree,
         generateFun: ((CreateResponse) -> Unit) -> Unit
     ) {
         dumbService.smartInvokeLater {
-            loadingLabel.isVisible = true
             tree.toggleRootVisibility()
             tree.selectTypeRoot(type)
         }
@@ -48,7 +46,6 @@ object CodeCreatingService {
             dumbService.smartInvokeLater { Messages.showErrorDialog(e.message, "Error") }
         } finally {
             dumbService.smartInvokeLater {
-                loadingLabel.isVisible = false
                 tree.toggleRootVisibility()
             }
         }

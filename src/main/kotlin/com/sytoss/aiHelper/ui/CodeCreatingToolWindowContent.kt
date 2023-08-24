@@ -4,10 +4,9 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
 import com.intellij.openapi.ui.Messages
-import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBCheckBox
-import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.components.BorderLayoutPanel
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
@@ -21,7 +20,6 @@ import java.awt.FlowLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import javax.swing.JPanel
-import javax.swing.SwingConstants
 import kotlin.concurrent.thread
 
 class CodeCreatingToolWindowContent {
@@ -30,8 +28,6 @@ class CodeCreatingToolWindowContent {
     private val mainPanel = JPanel(GridBagLayout())
 
     private val codePanel = BorderLayoutPanel()
-
-    private val loadingLabel = JBLabel("Loading...", AnimatedIcon.Default(), SwingConstants.LEFT)
 
     private var isLoading = false
 
@@ -109,7 +105,7 @@ class CodeCreatingToolWindowContent {
     private fun generate(elemToGenerate: ElementType) {
         isDone = elemToGenerate == elemsToGenerate.last()
 
-        create(elemToGenerate, loadingLabel, tree) { showCallback ->
+        create(elemToGenerate, tree) { showCallback ->
             dumbService.smartInvokeLater { isLoading = true }
             tree.setElementLoadingState(elemToGenerate, CreatedClassesTree.LoadingState.LOADING)
 
@@ -248,7 +244,6 @@ class CodeCreatingToolWindowContent {
 
                 tree.removeEditors()
                 tree.clearRoot()
-                loadingLabel.isVisible = false
             }
 
             override fun update(e: AnActionEvent) {
@@ -282,14 +277,16 @@ class CodeCreatingToolWindowContent {
         tree.toggleRootVisibility()
 
         //  NODE VIEWER
-        val nodeViewerPanel = BorderLayoutPanel()
-        nodeViewerPanel.addToCenter(ScrollWithInsets { codePanel })
-
-        loadingLabel.isVisible = false
-        nodeViewerPanel.addToTop(loadingLabel)
-
-        treeViewer.secondComponent = nodeViewerPanel
-        actionToolbar.targetComponent = nodeViewerPanel
+        val nodeViewerPane = JBScrollPane(
+            object : BorderLayoutPanel() {
+                init {
+                    addToCenter(codePanel)
+                    border = null
+                }
+            }
+        )
+        treeViewer.secondComponent = nodeViewerPane
+        actionToolbar.targetComponent = codePanel
 
         //  SET TREE COMPONENT
         contentPanel.secondComponent = treeViewerWithActions
