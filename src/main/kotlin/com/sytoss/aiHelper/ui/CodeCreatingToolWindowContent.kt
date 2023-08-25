@@ -37,7 +37,7 @@ class CodeCreatingToolWindowContent {
 
     private val pumlChooser = FileChooserCreateComponent("Choose PlantUML file", "puml")
 
-    private val elemsToGenerate = mutableSetOf<ElementType>()
+    private val elemsToGenerate = sortedSetOf<ElementType>()
 
     private var isBomCheckboxSelected = false
 
