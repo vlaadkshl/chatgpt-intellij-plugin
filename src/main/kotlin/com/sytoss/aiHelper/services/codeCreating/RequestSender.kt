@@ -25,7 +25,7 @@ object RequestSender {
             .newBuilder(URI.create("http://192.168.32.111:8000/process"))
             .header("Content-Type", "application/json")
             .POST(HttpRequest.BodyPublishers.ofString(reqString))
-            .timeout(Duration.ofMinutes(2L))
+            .timeout(Duration.ofMinutes(5L))
             .build()
 
         var httpResponse: HttpResponse<String>? = null
