@@ -3,6 +3,7 @@ package com.sytoss.aiHelper.services.codeCreating
 import com.intellij.openapi.ui.Messages
 import com.sytoss.aiHelper.bom.codeCreating.CreateRequest
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
+import com.sytoss.aiHelper.bom.codeCreating.ErrorResponse
 import com.sytoss.aiHelper.services.CommonFields.applicationManager
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -16,8 +17,6 @@ import java.time.Duration
 
 object RequestSender {
 
-    private val json = Json { ignoreUnknownKeys = true }
-
     fun sendRequest(request: CreateRequest): CreateResponse? {
         val reqString = Json.encodeToString(request)
 
@@ -29,10 +28,16 @@ object RequestSender {
             .timeout(Duration.ofMinutes(2L))
             .build()
 
+        var httpResponse: HttpResponse<String>? = null
         try {
-            val httpResponse = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString())
-            return json.decodeFromString<CreateResponse>(httpResponse.body())
+            httpResponse = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString())
+            return Json.decodeFromString<CreateResponse>(httpResponse.body())
         } catch (e: Exception) {
+            if (e is IllegalArgumentException) {
+                val errorJson = httpResponse?.let { Json.decodeFromString<ErrorResponse>(it.body()) }
+                return errorJson?.let { ErrorResponseParser.parse(it) }
+            }
+
             applicationManager.invokeLater {
                 when (e) {
                     is SocketTimeoutException -> Messages.showErrorDialog(
