@@ -122,12 +122,9 @@ class CreatedClassesTree(contentPanel: BorderLayoutPanel) : Tree(DefaultMutableT
     }
 
     fun selectTypeRoot(type: ElementType) {
-        val node = elementNodes[type]
-
-        if (node != null) {
-            val path = TreePath(node.path)
-            selectionModel.selectionPath = path
-        }
+        val node = elementNodes[type]!!
+        val path = TreePath(node.path)
+        selectionModel.selectionPath = path
     }
 
     fun fillElementNodes(elemsToGenerate: Collection<ElementType>) {
