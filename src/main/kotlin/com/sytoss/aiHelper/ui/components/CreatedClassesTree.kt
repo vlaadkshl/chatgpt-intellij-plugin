@@ -31,6 +31,8 @@ class CreatedClassesTree(contentPanel: BorderLayoutPanel) : Tree(DefaultMutableT
     private val elementLoading = mutableMapOf<ElementType, LoadingState>()
 
     init {
+        isRootVisible = false
+
         addTreeSelectionListener {
             (lastSelectedPathComponent as DefaultMutableTreeNode?)?.let { node ->
                 contentPanel.removeAll()
@@ -144,11 +146,6 @@ class CreatedClassesTree(contentPanel: BorderLayoutPanel) : Tree(DefaultMutableT
         val root = getRoot()
         root.removeAllChildren()
         (model as DefaultTreeModel).nodeStructureChanged(root)
-    }
-
-    fun toggleRootVisibility() {
-        val root = getRoot()
-        isRootVisible = (root.childCount != 0)
     }
 
     fun hasBom() = editorsByType.contains(ElementType.BOM)

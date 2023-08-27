@@ -154,8 +154,6 @@ class CodeCreatingToolWindowContent {
                 }
                 isNeedContinue = false
             }
-
-            tree.toggleRootVisibility()
         }
     }
 
@@ -288,7 +286,6 @@ class CodeCreatingToolWindowContent {
 
         //  TREE
         treeViewer.firstComponent = ScrollWithInsets { tree }
-        tree.toggleRootVisibility()
 
         //  NODE VIEWER
         val nodeViewerPane = JBScrollPane(
