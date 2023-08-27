@@ -1,7 +1,9 @@
 package com.sytoss.aiHelper.ui
 
-import com.intellij.icons.AllIcons
-import com.intellij.openapi.actionSystem.*
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.ActionToolbar
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.OnePixelSplitter
@@ -9,6 +11,8 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.components.BorderLayoutPanel
+import com.sytoss.aiHelper.actions.CancelAction
+import com.sytoss.aiHelper.actions.ContinueAction
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
 import com.sytoss.aiHelper.exceptions.generationException.ElementNotGeneratedException
@@ -231,20 +235,12 @@ class CodeCreatingToolWindowContent {
 
         //  ACTION TOOLBAR
 
-        class ContinueAction : AnAction("Co&ntinue Generating", null, AllIcons.Actions.Resume) {
-            override fun actionPerformed(e: AnActionEvent) {
-                needsContinue()
-            }
-
-            override fun update(e: AnActionEvent) {
-                e.presentation.isEnabled = !(isLoading || isDone)
-            }
-
-            override fun getActionUpdateThread() = ActionUpdateThread.EDT
-        }
-
-        class CancelAction : AnAction("Cance&l Generating", null, AllIcons.Actions.Cancel) {
-            override fun actionPerformed(e: AnActionEvent) {
+        val continueAction = ContinueAction(
+            actionPerformed = { needsContinue() },
+            update = { it.presentation.isEnabled = !(isLoading || isDone) }
+        )
+        val cancelAction = CancelAction(
+            actionPerformed = {
                 coroutineJob.cancel()
 
                 isDone = true
@@ -253,17 +249,9 @@ class CodeCreatingToolWindowContent {
                 for (elementType in elemsToGenerate) {
                     tree.setElementLoadingState(elementType, CreatedClassesTree.LoadingState.READY)
                 }
-            }
-
-            override fun update(e: AnActionEvent) {
-                e.presentation.isEnabled = isLoading
-            }
-
-            override fun getActionUpdateThread() = ActionUpdateThread.EDT
-        }
-
-        val continueAction = ContinueAction()
-        val cancelAction = CancelAction()
+            },
+            update = { it.presentation.isEnabled = isLoading }
+        )
 
         val actionToolbar = ActionManager.getInstance().createActionToolbar(
             ActionPlaces.TOOLBAR,
