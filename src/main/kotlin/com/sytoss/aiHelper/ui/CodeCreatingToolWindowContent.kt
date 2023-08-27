@@ -104,74 +104,62 @@ class CodeCreatingToolWindowContent {
         isNeedContinue = true
     }
 
-    private suspend fun createElem(elemToGenerate: ElementType): Deferred<CreateResponse?> =
-        coroutineScope {
-            async {
-                when (elemToGenerate) {
-                    ElementType.BOM -> CodeCreatingService.createBom(getPumlContentInEDT())
+    private suspend fun createElem(elemToGenerate: ElementType): CreateResponse? =
+        when (elemToGenerate) {
+            ElementType.BOM -> CodeCreatingService.createBom(getPumlContentInEDT())
 
-                    ElementType.DTO -> {
-                        if (tree.hasBom()) {
-                            val editorTexts = tree.getTextsFromEditors(ElementType.BOM)
-                            CodeCreatingService.createDtoFromBom(editorTexts)
-                        } else {
-                            CodeCreatingService.createDtoFromPuml(getPumlContentInEDT())
-                        }
-                    }
-
-                    ElementType.CONVERTER -> {
-                        if (!(tree.hasBom() || tree.hasDto())) {
-                            throw ElementNotGeneratedException(ElementType.BOM, ElementType.DTO)
-                        }
-                        val bomTexts = tree.getTextsFromEditors(ElementType.BOM)
-                        val dtoTexts = tree.getTextsFromEditors(ElementType.DTO)
-
-                        createConverters(bomTexts, dtoTexts)
-                    }
+            ElementType.DTO -> {
+                if (tree.hasBom()) {
+                    val editorTexts = tree.getTextsFromEditors(ElementType.BOM)
+                    CodeCreatingService.createDtoFromBom(editorTexts)
+                } else {
+                    CodeCreatingService.createDtoFromPuml(getPumlContentInEDT())
                 }
+            }
+
+            ElementType.CONVERTER -> {
+                if (!(tree.hasBom() || tree.hasDto())) {
+                    throw ElementNotGeneratedException(ElementType.BOM, ElementType.DTO)
+                }
+                val bomTexts = tree.getTextsFromEditors(ElementType.BOM)
+                val dtoTexts = tree.getTextsFromEditors(ElementType.DTO)
+
+                createConverters(bomTexts, dtoTexts)
             }
         }
 
     private suspend fun generate() {
-        elemsToGenerate.forEach { type ->
+        for (type in elemsToGenerate) {
             isLoading = true
             isDone = type == elemsToGenerate.last()
 
             tree.setElementLoadingState(type, CreatedClassesTree.LoadingState.LOADING)
             tree.selectTypeRoot(type)
 
-            try {
-                val response = createElem(type).await()
-
+            createElem(type)?.let { response ->
                 isLoading = false
 
-                if (response != null) {
-                    for (generatedClass in response.result) {
-                        tree.insertToTypeRoot(type, DefaultMutableTreeNode(generatedClass))
-                    }
-
-                    tree.fillEditorsByType(type, response)
-
-                    tree.expandTypeRoot(type)
-
-                    tree.setElementLoadingState(type, CreatedClassesTree.LoadingState.READY)
-
-                    while (!isNeedContinue) {
-                        delay(100)
-                    }
-                    isNeedContinue = false
+                for (generatedClass in response.result) {
+                    tree.insertToTypeRoot(type, DefaultMutableTreeNode(generatedClass))
                 }
-            } catch (e: Throwable) {
+
+                tree.fillEditorsByType(type, response)
+
+                tree.expandTypeRoot(type)
+
                 tree.setElementLoadingState(type, CreatedClassesTree.LoadingState.READY)
-                when (e) {
-                    is InterruptedException -> isDone = true
-                    else -> Messages.showErrorDialog(e.message, "Error Happened")
+
+                while (!isNeedContinue) {
+                    delay(100)
                 }
-            } finally {
-                tree.toggleRootVisibility()
+                isNeedContinue = false
             }
+
+            tree.toggleRootVisibility()
         }
     }
+
+    private lateinit var coroutineJob: Job
 
     private val generateBtn = JButtonWithListener("Generate Files") {
         if (!checkBeforeGenerating()) return@JButtonWithListener
@@ -182,7 +170,15 @@ class CodeCreatingToolWindowContent {
         tree.fillElementNodes(elemsToGenerate)
         tree.fillElementLoadingState(elemsToGenerate)
 
-        MainScope().launch(Dispatchers.Swing) { generate() }
+        coroutineJob = MainScope().launch(Dispatchers.Swing) {
+            try {
+                generate()
+            } catch (e: Throwable) {
+                if (e !is CancellationException) {
+                    Messages.showErrorDialog(e.message, "Error Happened")
+                }
+            }
+        }
     }
 
     init {
@@ -249,29 +245,33 @@ class CodeCreatingToolWindowContent {
             override fun getActionUpdateThread() = ActionUpdateThread.EDT
         }
 
-//        class CancelAction : AnAction("Cance&l Generating", null, AllIcons.Actions.Cancel) {
-//            override fun actionPerformed(e: AnActionEvent) {
-//                generateThread.interrupt()
-//
-//                tree.removeEditors()
-//                tree.clearRoot()
-//            }
-//
-//            override fun update(e: AnActionEvent) {
-//                e.presentation.isEnabled = isLoading
-//            }
-//
-//            override fun getActionUpdateThread() = ActionUpdateThread.EDT
-//        }
+        class CancelAction : AnAction("Cance&l Generating", null, AllIcons.Actions.Cancel) {
+            override fun actionPerformed(e: AnActionEvent) {
+                coroutineJob.cancel()
+
+                isDone = true
+                isLoading = false
+
+                for (elementType in elemsToGenerate) {
+                    tree.setElementLoadingState(elementType, CreatedClassesTree.LoadingState.READY)
+                }
+            }
+
+            override fun update(e: AnActionEvent) {
+                e.presentation.isEnabled = isLoading
+            }
+
+            override fun getActionUpdateThread() = ActionUpdateThread.EDT
+        }
 
         val continueAction = ContinueAction()
-//        val cancelAction = CancelAction()
+        val cancelAction = CancelAction()
 
         val actionToolbar = ActionManager.getInstance().createActionToolbar(
             ActionPlaces.TOOLBAR,
             DefaultActionGroup(
                 continueAction,
-//                cancelAction
+                cancelAction
             ),
             false
         ) as ActionToolbarImpl

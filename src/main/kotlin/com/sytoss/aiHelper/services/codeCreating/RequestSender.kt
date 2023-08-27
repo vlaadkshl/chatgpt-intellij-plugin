@@ -4,6 +4,7 @@ import com.sytoss.aiHelper.bom.codeCreating.CreateRequest
 import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.ErrorResponse
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.future.await
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -27,13 +28,20 @@ object RequestSender {
             .timeout(Duration.ofMinutes(5L))
             .build()
 
-        val httpResponse: HttpResponse<String>? = withContext(Dispatchers.IO) {
-            httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString())
+        val httpResponse: String? = withContext(Dispatchers.IO) {
+            val response = httpClient.sendAsync(
+                httpRequest,
+                HttpResponse.BodyHandlers.ofString()
+            ).await()
+
+            if (response.statusCode() == 200) response.body()
+            else null
         }
+
         return try {
-            httpResponse?.body()?.let { Json.decodeFromString<CreateResponse>(it) }
+            httpResponse?.let { Json.decodeFromString<CreateResponse>(it) }
         } catch (_: IllegalArgumentException) {
-            val errorJson = httpResponse?.body()?.let { Json.decodeFromString<ErrorResponse>(it) }
+            val errorJson = httpResponse?.let { Json.decodeFromString<ErrorResponse>(it) }
             errorJson?.let { ErrorResponseParser.parse(it) }
         }
     }

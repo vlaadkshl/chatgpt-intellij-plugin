@@ -140,7 +140,11 @@ class CreatedClassesTree(contentPanel: BorderLayoutPanel) : Tree(DefaultMutableT
         elemsToGenerate.forEach { elementLoading[it] = LoadingState.WAITING }
     }
 
-    fun clearRoot() = getRoot().removeAllChildren()
+    fun clearRoot() {
+        val root = getRoot()
+        root.removeAllChildren()
+        (model as DefaultTreeModel).nodeStructureChanged(root)
+    }
 
     fun toggleRootVisibility() {
         val root = getRoot()
