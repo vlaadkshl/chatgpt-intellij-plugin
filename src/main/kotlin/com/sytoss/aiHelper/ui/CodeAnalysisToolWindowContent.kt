@@ -14,7 +14,7 @@ import com.intellij.ui.dsl.builder.bind
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.layout.selected
 import com.sytoss.aiHelper.bom.ModuleChooseType
-import com.sytoss.aiHelper.services.CommonFields.dumbService
+import com.sytoss.aiHelper.services.CommonFields.coroutineSwingLaunch
 import com.sytoss.aiHelper.services.CommonFields.project
 import com.sytoss.aiHelper.services.PackageFinder
 import com.sytoss.aiHelper.services.PyramidChooser
@@ -29,7 +29,6 @@ import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JPanel
 import javax.swing.SwingConstants
-import kotlin.concurrent.thread
 
 class CodeAnalysisToolWindowContent {
 
@@ -70,18 +69,18 @@ class CodeAnalysisToolWindowContent {
 
         row("Code Analysis Feature") {
             button("Show Rules") { RulesTableDialog(table).show() }
-            button("Errors Analysis") { analyseErrors() }
+            button("Errors Analysis") {
+                coroutineSwingLaunch { analyseErrors() }
+            }
         }.bottomGap(BottomGap.MEDIUM)
 
         row("Pyramid Matching Feature") {
             button("Select Pyramid JSON") {
-                dumbService.smartInvokeLater {
-                    PyramidChooser.selectFile(it.source as JButton)
-                    pyramidAnalysisButton.enabled(PyramidChooser.isFileSelected())
-                }
+                PyramidChooser.selectFile(it.source as JButton)
+                pyramidAnalysisButton.enabled(PyramidChooser.isFileSelected())
             }
             pyramidAnalysisButton = button("Pyramid Matching Analysis") {
-                analysePyramid()
+                coroutineSwingLaunch { analysePyramid() }
             }.enabled(false)
         }
     }
@@ -111,7 +110,7 @@ class CodeAnalysisToolWindowContent {
         warningsPanel.removeAll()
         errorLabel.visible(false)
 
-        if (additionalAction != null) additionalAction()
+        additionalAction?.invoke()
     }
 
     private fun findPackagesAndAsk(): Boolean {
@@ -136,7 +135,7 @@ class CodeAnalysisToolWindowContent {
         ).ask(project)
     }
 
-    private fun analyseErrors() {
+    private suspend fun analyseErrors() {
         controlPanel.apply()
 
         if (table.isNothingSelected()) {
@@ -154,36 +153,32 @@ class CodeAnalysisToolWindowContent {
 
         preparePanel()
 
-        thread {
-            try {
-                val fileContent = PackageFinder.toClassFiles()
+        try {
+            val fileContent = PackageFinder.toClassFiles()
 
-                loadingLabel.visible(true)
+            loadingLabel.visible(true)
 
-                val report = CodeCheckingService.analyse(
-                    fileContent,
-                    table.getCheckedRules()
-                ).result
+            val report = CodeCheckingService.analyse(
+                fileContent,
+                table.getCheckedRules()
+            ).result
 
-                dumbService.smartInvokeLater {
-                    val reportPanel = UiBuilder.buildCheckingReportPanel(report)
-                    warningsPanel.add(reportPanel)
-                }
-            } catch (e: Exception) {
-                when (e) {
-                    is SocketTimeoutException ->
-                        errorLabel.component.text = "Oops... We have a timeout error.\nPlease, try again!"
+            val reportPanel = UiBuilder.buildCheckingReportPanel(report)
+            warningsPanel.add(reportPanel)
+        } catch (e: Exception) {
+            when (e) {
+                is SocketTimeoutException -> errorLabel.component.text =
+                    "Oops... We have a timeout error.\nPlease, try again!"
 
-                    else -> errorLabel.component.text = "Error: ${e.message}"
-                }
-                errorLabel.visible(true)
-            } finally {
-                loadingLabel.visible(false)
+                else -> errorLabel.component.text = "Error: ${e.message}"
             }
+            errorLabel.visible(true)
+        } finally {
+            loadingLabel.visible(false)
         }
     }
 
-    private fun analysePyramid() {
+    private suspend fun analysePyramid() {
         controlPanel.apply()
 
         val isContinue = findPackagesAndAsk()
@@ -193,41 +188,35 @@ class CodeAnalysisToolWindowContent {
 
         preparePanel { PyramidChooser.clearPyramid() }
 
-        thread {
-            try {
-                PyramidChooser.parsePyramidFromJson()
+        try {
+            PyramidChooser.parsePyramidFromJson()
 
-                val fileContent = PackageFinder.toClassFiles()
+            val fileContent = PackageFinder.toClassFiles()
 
-                loadingLabel.visible(true)
+            loadingLabel.visible(true)
 
-                val report = PyramidCheckingService.analyse(fileContent).result
+            val report = PyramidCheckingService.analyse(fileContent).result
 
-                dumbService.smartInvokeLater {
-                    val reportPanel = UiBuilder.buildPyramidReportPanel(report)
-                    warningsPanel.add(reportPanel)
-                }
-            } catch (e: Exception) {
-                when (e) {
-                    is NoSuchFileException -> dumbService.smartInvokeLater {
-                        MessageDialogBuilder.yesNo(
-                            title = "Pyramid Processing Error",
-                            message = """
-                                Error is occured while processing the pyramid:
-                                ${e.message}
-                            """.trimIndent()
-                        ).ask(project)
-                    }
+            val reportPanel = UiBuilder.buildPyramidReportPanel(report)
+            warningsPanel.add(reportPanel)
+        } catch (e: Exception) {
+            when (e) {
+                is NoSuchFileException -> MessageDialogBuilder.yesNo(
+                    title = "Pyramid Processing Error",
+                    message = """
+                        Error is occured while processing the pyramid:
+                        ${e.message}
+                    """.trimIndent()
+                ).ask(project)
 
-                    is SocketTimeoutException ->
-                        errorLabel.component.text = "Oops... We have a timeout error.\nPlease, try again!"
+                is SocketTimeoutException ->
+                    errorLabel.component.text = "Oops... We have a timeout error.\nPlease, try again!"
 
-                    else -> errorLabel.component.text = "Error: ${e.message}"
-                }
-                errorLabel.visible(true)
-            } finally {
-                loadingLabel.visible(false)
+                else -> errorLabel.component.text = "Error: ${e.message}"
             }
+            errorLabel.visible(true)
+        } finally {
+            loadingLabel.visible(false)
         }
     }
 }

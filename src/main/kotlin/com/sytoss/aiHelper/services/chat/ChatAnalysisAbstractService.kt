@@ -11,6 +11,9 @@ import com.theokanning.openai.client.OpenAiApi
 import com.theokanning.openai.completion.chat.ChatCompletionRequest
 import com.theokanning.openai.completion.chat.ChatMessage
 import com.theokanning.openai.service.OpenAiService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.withContext
 import java.time.Duration
 
 abstract class ChatAnalysisAbstractService {
@@ -32,9 +35,13 @@ abstract class ChatAnalysisAbstractService {
             .messages(messages)
             .build()
 
-    protected fun sendRequestToChat(request: ChatCompletionRequest?): String {
-        val response = openAiApi.createChatCompletion(request).blockingGet()
-        return response?.choices?.get(0)?.message?.content ?: throw RuntimeException("Can't get response")
+    protected suspend fun sendRequestToChat(request: ChatCompletionRequest?): String {
+        return withContext(Dispatchers.IO) {
+            async {
+                openAiApi.createChatCompletion(request).blockingGet()
+            }.await()
+        }?.choices?.get(0)?.message?.content
+            ?: throw RuntimeException("Can't get response")
     }
 
     fun getClassVirtualFile(warningClass: ClassGroupTemplate): VirtualFile? {

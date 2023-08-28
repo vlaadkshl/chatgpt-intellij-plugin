@@ -17,11 +17,13 @@ import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
 import com.sytoss.aiHelper.exceptions.generationException.ElementNotGeneratedException
 import com.sytoss.aiHelper.services.CommonFields.applicationManager
+import com.sytoss.aiHelper.services.CommonFields.coroutineSwingLaunch
 import com.sytoss.aiHelper.services.codeCreating.CodeCreatingService
 import com.sytoss.aiHelper.services.codeCreating.CodeCreatingService.createConverters
 import com.sytoss.aiHelper.ui.components.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.swing.Swing
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import java.awt.FlowLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
@@ -172,7 +174,7 @@ class CodeCreatingToolWindowContent {
         tree.fillElementNodes(elemsToGenerate)
         tree.fillElementLoadingState(elemsToGenerate)
 
-        coroutineJob = MainScope().launch(Dispatchers.Swing) {
+        coroutineJob = coroutineSwingLaunch {
             try {
                 generate()
             } catch (e: Throwable) {
