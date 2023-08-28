@@ -43,7 +43,7 @@ class CodeCreatingToolWindowContent {
 
     private val tree = CreatedClassesTree(codePanel)
 
-    private val pumlChooser = FileChooserCreateComponent("Choose PlantUML file", "puml")
+    private val pumlChooser = FileChooserComponent("Choose PlantUML file", "puml")
 
     private val elemsToGenerate = sortedSetOf<ElementType>()
 
@@ -91,7 +91,7 @@ class CodeCreatingToolWindowContent {
             Messages.showInfoMessage("There is no types of files to create.", "Create Error")
             return false
         }
-        if (pumlChooser.selectedFiles.isEmpty()) {
+        if (pumlChooser.selectedFile == null) {
             Messages.showInfoMessage("There is no .puml file.", "Create Error")
             return false
         }
@@ -100,7 +100,7 @@ class CodeCreatingToolWindowContent {
 
     private fun getPumlContentInEDT(): String? {
         var pumlContent: String? = null
-        applicationManager.invokeAndWait { pumlContent = pumlChooser.getFirstFileContent() }
+        applicationManager.invokeAndWait { pumlContent = pumlChooser.getFileContent() }
         return pumlContent
     }
 

@@ -14,8 +14,8 @@ import java.nio.file.Files
 import javax.swing.JComponent
 import javax.swing.JPanel
 
-class FileChooserCreateComponent(text: String) : JPanel(FlowLayout(FlowLayout.LEFT)) {
-    val selectedFiles = mutableListOf<VirtualFile>()
+class FileChooserComponent(text: String) : JPanel(FlowLayout(FlowLayout.LEFT)) {
+    var selectedFile: VirtualFile? = null
 
     private var descriptor = FileChooserDescriptorFactory.createSingleFileDescriptor()
 
@@ -27,57 +27,52 @@ class FileChooserCreateComponent(text: String) : JPanel(FlowLayout(FlowLayout.LE
     }
 
     private val showButton = JButtonWithListener("Show Selected", AllIcons.Actions.ToggleVisibility) {
-        val dialog = object : DialogWrapper(true) {
-            init {
-                title = "Showing Selected Files"
-                init()
-            }
+        if (selectedFile != null) {
+            val dialog = object : DialogWrapper(true) {
+                init {
+                    title = "Showing Selected Files"
+                    init()
+                }
 
-            override fun createCenterPanel(): JComponent {
-                return ScrollWithInsets {
-                    panel {
-                        for (file in selectedFiles) {
+                override fun createCenterPanel(): JComponent {
+                    return ScrollWithInsets {
+                        panel {
                             row {
-                                label(file.name)
+                                label(selectedFile!!.name)
                             }
                             row {
-                                val fileContent = Files.readString(file.toNioPath()).replace("\r\n", "\n")
+                                val fileContent = Files.readString(selectedFile!!.toNioPath()).replace("\r\n", "\n")
 
                                 val document = EditorFactory.getInstance().createDocument(fileContent)
                                 val editorPane = EditorFactory.getInstance().createEditor(document, project)
                                 cell(editorPane.component)
                             }
+
                         }
                     }
                 }
             }
+            dialog.showAndGet()
         }
-        dialog.showAndGet()
     }
 
     private val removeButton = JButtonWithListener("Clear Selection", AllIcons.Diff.Remove) {
-        selectedFiles.clear()
+        selectedFile = null
         changeButtonsStateToAppropriate()
     }
 
     private val chooser = JButtonWithListener("Select Files") {
-        FileChooser.chooseFiles(
-            FileChooserDescriptorFactory.createMultipleFilesNoJarsDescriptor(),
-            project,
-            null
-        ) {
-            selectedFiles.clear()
-            selectedFiles.addAll(it)
-
+        FileChooser.chooseFile(descriptor, project, null) {
+            selectedFile = it
             changeButtonsStateToAppropriate()
         }
     }
 
-    fun getFirstFileContent(): String = Files.readString(selectedFiles[0].toNioPath())
+    fun getFileContent(): String = Files.readString(selectedFile?.toNioPath())
 
     private fun changeButtonsStateToAppropriate() {
-        showButton.isEnabled = selectedFiles.isNotEmpty()
-        removeButton.isEnabled = selectedFiles.isNotEmpty()
+        showButton.isEnabled = selectedFile != null
+        removeButton.isEnabled = selectedFile != null
     }
 
     init {
