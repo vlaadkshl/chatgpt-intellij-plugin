@@ -15,6 +15,8 @@ repositories {
 dependencies {
     implementation("com.theokanning.openai-gpt3-java:service:0.14.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.7.3")
 }
 
 // Configure Gradle IntelliJ Plugin

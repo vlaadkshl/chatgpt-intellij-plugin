@@ -24,7 +24,7 @@ object CodeCheckingService : ChatAnalysisAbstractService() {
         }
     }
 
-    fun analyse(selectedFiles: MutableList<ChatMessageClassData>, rules: List<Rule>): WarningsResult {
+    suspend fun analyse(selectedFiles: MutableList<ChatMessageClassData>, rules: List<Rule>): WarningsResult {
         for (file in selectedFiles) {
             val applicableRules = rules.filter { it.fileTypes.contains(file.type) }
             file.rules = applicableRules.map { it.rule }

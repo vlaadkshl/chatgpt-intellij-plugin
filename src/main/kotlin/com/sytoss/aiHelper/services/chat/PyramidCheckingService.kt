@@ -10,7 +10,7 @@ import kotlinx.serialization.json.Json
 
 object PyramidCheckingService : ChatAnalysisAbstractService() {
 
-    fun analyse(selectedFiles: List<ChatMessageClassData>): PyramidAnalysisResult {
+    suspend fun analyse(selectedFiles: List<ChatMessageClassData>): PyramidAnalysisResult {
         if (!PyramidChooser.isPyramidSelected()) {
             throw NoSuchElementException("No pyramid was found!")
         }

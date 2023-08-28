@@ -5,7 +5,7 @@ import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.ModelType
 
 object CodeCreatorWithChatServer {
-    fun generateBomFromPuml(pumlContent: String): CreateResponse? {
+    suspend fun generateBomFromPuml(pumlContent: String): CreateResponse? {
         val request = CreateRequest(
             model = ModelType.GPT,
             prompt = """
@@ -20,7 +20,7 @@ object CodeCreatorWithChatServer {
         return RequestSender.sendRequest(request)
     }
 
-    fun generateDtoFromPuml(pumlContent: String): CreateResponse? {
+    suspend fun generateDtoFromPuml(pumlContent: String): CreateResponse? {
         val request = CreateRequest(
             model = ModelType.GPT,
             prompt = """
@@ -35,7 +35,7 @@ object CodeCreatorWithChatServer {
         return RequestSender.sendRequest(request)
     }
 
-    fun generateDtoFromBom(bomElements: List<String>): CreateResponse? {
+    suspend fun generateDtoFromBom(bomElements: List<String>): CreateResponse? {
         val request = CreateRequest(
             model = ModelType.GPT,
             prompt = """
@@ -48,7 +48,7 @@ object CodeCreatorWithChatServer {
         return RequestSender.sendRequest(request)
     }
 
-    fun generateConverters(boms: List<String>, dtos: List<String>): CreateResponse? {
+    suspend fun generateConverters(boms: List<String>, dtos: List<String>): CreateResponse? {
         val request = CreateRequest(
             model = ModelType.GPT,
             prompt = """

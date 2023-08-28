@@ -1,7 +1,9 @@
 package com.sytoss.aiHelper.ui
 
-import com.intellij.icons.AllIcons
-import com.intellij.openapi.actionSystem.*
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionPlaces
+import com.intellij.openapi.actionSystem.ActionToolbar
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.OnePixelSplitter
@@ -9,18 +11,24 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBInsets
 import com.intellij.util.ui.components.BorderLayoutPanel
+import com.sytoss.aiHelper.actions.CancelAction
+import com.sytoss.aiHelper.actions.ContinueAction
+import com.sytoss.aiHelper.bom.codeCreating.CreateResponse
 import com.sytoss.aiHelper.bom.codeCreating.ElementType
+import com.sytoss.aiHelper.exceptions.generationException.ElementNotGeneratedException
 import com.sytoss.aiHelper.services.CommonFields.applicationManager
-import com.sytoss.aiHelper.services.CommonFields.dumbService
+import com.sytoss.aiHelper.services.CommonFields.coroutineSwingLaunch
 import com.sytoss.aiHelper.services.codeCreating.CodeCreatingService
-import com.sytoss.aiHelper.services.codeCreating.CodeCreatingService.create
 import com.sytoss.aiHelper.services.codeCreating.CodeCreatingService.createConverters
 import com.sytoss.aiHelper.ui.components.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import java.awt.FlowLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import javax.swing.JPanel
-import kotlin.concurrent.thread
+import javax.swing.tree.DefaultMutableTreeNode
 
 class CodeCreatingToolWindowContent {
     val contentPanel = OnePixelSplitter()
@@ -102,65 +110,60 @@ class CodeCreatingToolWindowContent {
         isNeedContinue = true
     }
 
-    private fun generate(elemToGenerate: ElementType) {
-        isDone = elemToGenerate == elemsToGenerate.last()
+    private suspend fun createElem(elemToGenerate: ElementType): CreateResponse? =
+        when (elemToGenerate) {
+            ElementType.BOM -> CodeCreatingService.createBom(getPumlContentInEDT())
 
-        create(elemToGenerate, tree) { showCallback ->
-            dumbService.smartInvokeLater { isLoading = true }
-            tree.setElementLoadingState(elemToGenerate, CreatedClassesTree.LoadingState.LOADING)
-
-            when (elemToGenerate) {
-                ElementType.BOM -> {
-                    CodeCreatingService.createBom(getPumlContentInEDT(), showCallback)
-                }
-
-                ElementType.DTO -> {
-                    if (tree.hasBom()) {
-                        val editorTexts = tree.getTextsFromEditors(ElementType.BOM)
-                        CodeCreatingService.createDtoFromBom(editorTexts, showCallback)
-                    } else {
-                        CodeCreatingService.createDtoFromPuml(getPumlContentInEDT(), showCallback)
-                    }
-                }
-
-                ElementType.CONVERTER -> {
-                    if (!(tree.hasBom() || tree.hasDto())) {
-                        dumbService.smartInvokeLater {
-                            Messages.showInfoMessage(
-                                "There were no BOMs and DTOs generated.",
-                                "${ElementType.CONVERTER} Generating Error"
-                            )
-                        }
-                        return@create
-                    }
-                    val bomTexts = tree.getTextsFromEditors(ElementType.BOM)
-                    val dtoTexts = tree.getTextsFromEditors(ElementType.DTO)
-
-                    createConverters(bomTexts, dtoTexts, showCallback)
+            ElementType.DTO -> {
+                if (tree.hasBom()) {
+                    val editorTexts = tree.getTextsFromEditors(ElementType.BOM)
+                    CodeCreatingService.createDtoFromBom(editorTexts)
+                } else {
+                    CodeCreatingService.createDtoFromPuml(getPumlContentInEDT())
                 }
             }
 
-            tree.setElementLoadingState(elemToGenerate, CreatedClassesTree.LoadingState.READY)
-            dumbService.smartInvokeLater { isLoading = false }
+            ElementType.CONVERTER -> {
+                if (!(tree.hasBom() || tree.hasDto())) {
+                    throw ElementNotGeneratedException(ElementType.BOM, ElementType.DTO)
+                }
+                val bomTexts = tree.getTextsFromEditors(ElementType.BOM)
+                val dtoTexts = tree.getTextsFromEditors(ElementType.DTO)
+
+                createConverters(bomTexts, dtoTexts)
+            }
         }
 
-        while (!isNeedContinue) {
-            Thread.sleep(100)
-        }
+    private suspend fun generate() {
+        for (type in elemsToGenerate) {
+            isLoading = true
+            isDone = type == elemsToGenerate.last()
 
-        isNeedContinue = false
-    }
+            tree.setElementLoadingState(type, CreatedClassesTree.LoadingState.LOADING)
+            tree.selectTypeRoot(type)
 
-    private val generateThread = thread(start = false) {
-        elemsToGenerate.forEach {
-            try {
-                generate(it)
-            } catch (_: InterruptedException) {
-                tree.setElementLoadingState(it, CreatedClassesTree.LoadingState.READY)
-                isDone = true
+            createElem(type)?.let { response ->
+                isLoading = false
+
+                for (generatedClass in response.result) {
+                    tree.insertToTypeRoot(type, DefaultMutableTreeNode(generatedClass))
+                }
+
+                tree.fillEditorsByType(type, response)
+
+                tree.expandTypeRoot(type)
+
+                tree.setElementLoadingState(type, CreatedClassesTree.LoadingState.READY)
+
+                while (!isNeedContinue) {
+                    delay(100)
+                }
+                isNeedContinue = false
             }
         }
     }
+
+    private lateinit var coroutineJob: Job
 
     private val generateBtn = JButtonWithListener("Generate Files") {
         if (!checkBeforeGenerating()) return@JButtonWithListener
@@ -171,7 +174,15 @@ class CodeCreatingToolWindowContent {
         tree.fillElementNodes(elemsToGenerate)
         tree.fillElementLoadingState(elemsToGenerate)
 
-        generateThread.start()
+        coroutineJob = coroutineSwingLaunch {
+            try {
+                generate()
+            } catch (e: Throwable) {
+                if (e !is CancellationException) {
+                    Messages.showErrorDialog(e.message, "Error Happened")
+                }
+            }
+        }
     }
 
     init {
@@ -226,41 +237,29 @@ class CodeCreatingToolWindowContent {
 
         //  ACTION TOOLBAR
 
-        class ContinueAction : AnAction("Co&ntinue Generating", null, AllIcons.Actions.Resume) {
-            override fun actionPerformed(e: AnActionEvent) {
-                needsContinue()
-            }
+        val continueAction = ContinueAction(
+            actionPerformed = { needsContinue() },
+            update = { it.presentation.isEnabled = !(isLoading || isDone) }
+        )
+        val cancelAction = CancelAction(
+            actionPerformed = {
+                coroutineJob.cancel()
 
-            override fun update(e: AnActionEvent) {
-                e.presentation.isEnabled = !(isLoading || isDone)
-            }
+                isDone = true
+                isLoading = false
 
-            override fun getActionUpdateThread() = ActionUpdateThread.EDT
-        }
-
-        class CancelAction : AnAction("Cance&l Generating", null, AllIcons.Actions.Cancel) {
-            override fun actionPerformed(e: AnActionEvent) {
-                generateThread.interrupt()
-
-                tree.removeEditors()
-                tree.clearRoot()
-            }
-
-            override fun update(e: AnActionEvent) {
-                e.presentation.isEnabled = isLoading
-            }
-
-            override fun getActionUpdateThread() = ActionUpdateThread.EDT
-        }
-
-        val continueAction = ContinueAction()
-        val cancelAction = CancelAction()
+                for (elementType in elemsToGenerate) {
+                    tree.setElementLoadingState(elementType, CreatedClassesTree.LoadingState.READY)
+                }
+            },
+            update = { it.presentation.isEnabled = isLoading }
+        )
 
         val actionToolbar = ActionManager.getInstance().createActionToolbar(
             ActionPlaces.TOOLBAR,
             DefaultActionGroup(
                 continueAction,
-//                cancelAction
+                cancelAction
             ),
             false
         ) as ActionToolbarImpl
@@ -277,7 +276,6 @@ class CodeCreatingToolWindowContent {
 
         //  TREE
         treeViewer.firstComponent = ScrollWithInsets { tree }
-        tree.toggleRootVisibility()
 
         //  NODE VIEWER
         val nodeViewerPane = JBScrollPane(
